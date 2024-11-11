@@ -37,7 +37,7 @@ tokio = { version = "1", features = [
   "rt-multi-thread",
 ] }
 peerpiper-plugins = { git = "https://github.com/PeerPiper/peerpiper.git" }
-# rfd = "0.13" # Rust File Dialog 
+rfd = "0.15" # Rust File Dialog 
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
