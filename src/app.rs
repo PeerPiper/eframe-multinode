@@ -1,3 +1,5 @@
+mod error;
+mod file_dialog;
 mod platform;
 
 pub(crate) use platform::Platform;
@@ -15,6 +17,8 @@ pub struct TemplateApp {
     #[serde(skip)]
     /// Platform  specific handlers for native and web     
     platform: Platform,
+
+    file_dialog: file_dialog::FileDialog,
 }
 
 impl Default for TemplateApp {
@@ -24,6 +28,7 @@ impl Default for TemplateApp {
             label: "Hello World!".to_owned(),
             value: 2.7,
             platform: Default::default(),
+            file_dialog: Default::default(),
         }
     }
 }
@@ -93,16 +98,14 @@ impl eframe::App for TemplateApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("eframe template");
+            ui.heading("Load Plugin");
 
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(&mut self.label);
-            });
-
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                self.value += 1.0;
+            let platform_clone = self.platform.clone();
+            let on_load_callback = move |name, bytes| {
+                platform_clone.load_plugin(name, bytes);
+            };
+            if let Err(e) = self.file_dialog.file_dialog(ui, on_load_callback) {
+                tracing::error!("Failed to open file dialog: {:?}", e);
             }
 
             ui.separator();
