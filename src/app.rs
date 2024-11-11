@@ -61,7 +61,7 @@ impl eframe::App for TemplateApp {
         // For inspiration and more examples, go to https://emilk.github.io/egui
 
         // pass the ctx to the platform
-        #[cfg(not(target_arch = "wasm32"))]
+        // #[cfg(not(target_arch = "wasm32"))]
         if !self.platform.egui_ctx() {
             self.platform.set_egui_ctx(ctx.clone());
         }
@@ -110,7 +110,7 @@ impl eframe::App for TemplateApp {
 
             ui.separator();
 
-            #[cfg(not(target_arch = "wasm32"))]
+            // #[cfg(not(target_arch = "wasm32"))]
             ui.vertical(|ui| {
                 self.platform.show(ctx, ui);
             });

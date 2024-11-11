@@ -1,10 +1,15 @@
+/// Native File Loader
 #[cfg(not(target_arch = "wasm32"))]
 mod native;
 
-// TODO: Web
-// #[cfg(target_arch = "wasm32")]
-// pub use multinode_web::file_dialog::FileDialog;
+/// Web File Loader
+#[cfg(target_arch = "wasm32")]
+mod web;
 
-// use as file_dialog
+/// Web File Loader
+#[cfg(target_arch = "wasm32")]
+pub use web::FileDialog;
+
+/// use as file_dialog
 #[cfg(not(target_arch = "wasm32"))]
 pub use native::FileDialog;

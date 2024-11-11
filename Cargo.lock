@@ -1909,6 +1909,7 @@ dependencies = [
  "eframe",
  "egui",
  "env_logger",
+ "getrandom",
  "log",
  "peerpiper-plugins",
  "rfd",
