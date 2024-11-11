@@ -109,25 +109,26 @@ jobs:
       fail-fast: true
       matrix:
         include:
-        # - os: macos-latest
-        #   TARGET: aarch64-apple-darwin
+        - os: macos-latest
+          TARGET: aarch64-apple-darwin
 
         # apple x86_64 
-        # - os: macos-latest
-        #   TARGET: x86_64-apple-darwin
+        - os: macos-latest
+          TARGET: x86_64-apple-darwin
 
         - os: ubuntu-latest
           TARGET: aarch64-unknown-linux-gnu
 
+        # wasmtime cannot be built on armv7 as it's 32-bit
         # - os: ubuntu-latest
         #   TARGET: armv7-unknown-linux-gnueabihf
 
         - os: ubuntu-latest
           TARGET: x86_64-unknown-linux-gnu
 
-        # - os: windows-latest
-        #   TARGET: x86_64-pc-windows-msvc
-        #   EXTENSION: .exe
+        - os: windows-latest
+          TARGET: x86_64-pc-windows-msvc
+          EXTENSION: .exe
 
     steps:
     - name: Building ${{ matrix.TARGET }}
