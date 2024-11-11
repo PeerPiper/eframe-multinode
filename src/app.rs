@@ -1,3 +1,7 @@
+mod platform;
+
+pub(crate) use platform::Platform;
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -7,6 +11,10 @@ pub struct TemplateApp {
 
     #[serde(skip)] // This how you opt-out of serialization of a field
     value: f32,
+
+    #[serde(skip)]
+    /// Platform  specific handlers for native and web     
+    platform: Platform,
 }
 
 impl Default for TemplateApp {
@@ -15,6 +23,7 @@ impl Default for TemplateApp {
             // Example stuff:
             label: "Hello World!".to_owned(),
             value: 2.7,
+            platform: Default::default(),
         }
     }
 }
@@ -46,6 +55,12 @@ impl eframe::App for TemplateApp {
         // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
 
+        // pass the ctx to the platform
+        #[cfg(not(target_arch = "wasm32"))]
+        if !self.platform.egui_ctx() {
+            self.platform.set_egui_ctx(ctx.clone());
+        }
+
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
 
@@ -65,6 +80,17 @@ impl eframe::App for TemplateApp {
             });
         });
 
+        egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
+            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
+                powered_by_egui_and_eframe(ui);
+                ui.add(egui::github_link_file!(
+                    "https://github.com/PeerPiper/egui-multinode/blob/main/",
+                    format!("🖹 Rust Source Code")
+                ));
+                egui::warn_if_debug_build(ui);
+            });
+        });
+
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
             ui.heading("eframe template");
@@ -81,14 +107,9 @@ impl eframe::App for TemplateApp {
 
             ui.separator();
 
-            ui.add(egui::github_link_file!(
-                "https://github.com/emilk/eframe_template/blob/main/",
-                "Source code."
-            ));
-
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                powered_by_egui_and_eframe(ui);
-                egui::warn_if_debug_build(ui);
+            #[cfg(not(target_arch = "wasm32"))]
+            ui.vertical(|ui| {
+                self.platform.show(ctx, ui);
             });
         });
     }
