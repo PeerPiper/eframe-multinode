@@ -129,10 +129,11 @@ jobs:
     - name: Building ${{ matrix.TARGET }}
       run: echo "${{ matrix.TARGET }}"
 
+    - uses: actions/checkout@master
     - name: Install build dependencies - Rustup
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: ${{ matrix.TARGET }}
+      run: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable --profile default --target ${{ matrix.TARGET }} -y
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
     # For linux, it's necessary to use cross from the git repository to avoid glibc problems
     # Ref: https://github.com/cross-rs/cross/issues/1510
