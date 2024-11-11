@@ -1867,6 +1867,7 @@ dependencies = [
  "log",
  "peerpiper-plugins",
  "serde",
+ "tokio",
  "tracing",
  "tracing-subscriber",
  "wasm-bindgen-futures",
