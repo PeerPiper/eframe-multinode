@@ -22,20 +22,22 @@ log = "0.4"
 
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
+tracing = { version = "0.1" }
+# seed-keeper-core = { git = "https://github.com/DougAnderson444/seed-keeper.git" }
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-tokio = { version = "1", features = [
-  "time",
-  "rt",
-  "macros",
-  "sync",
-  "rt-multi-thread",
-] }
-peerpiper-plugins = { git = "https://github.com/PeerPiper/peerpiper.git" }
-rfd = "0.13" # Rust File Dialog 
+# tokio = { version = "1", features = [
+#   "time",
+#   "rt",
+#   "macros",
+#   "sync",
+#   "rt-multi-thread",
+# ] }
+# peerpiper-plugins = { git = "https://github.com/PeerPiper/peerpiper.git" }
+# rfd = "0.13" # Rust File Dialog 
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
