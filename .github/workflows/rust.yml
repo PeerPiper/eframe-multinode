@@ -142,7 +142,7 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
         # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
-        targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+        targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || contains(matrix.TARGET, 'linux') && 'aarch64-unknown-linux-gnu,x86_64-unknown-linux-gnu' || 'x86_64-pc-windows-msvc' }}
 
     - name: Set default cargo build target
       run: echo "CARGO_BUILD_TARGET=${{ matrix.TARGET }}" >> $GITHUB_ENV
