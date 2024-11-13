@@ -131,9 +131,11 @@ jobs:
           EXTENSION: .exe
 
     steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
     - name: Building ${{ matrix.TARGET }}
       run: echo "${{ matrix.TARGET }}"
-
       
     - name: install Rust  
       uses: dtolnay/rust-toolchain@stable
