@@ -1,10 +1,11 @@
 [package]
-name = "eframe_ci_test"
-version = "0.1.1"
-authors = ["Emil Ernerfeldt <emil.ernerfeldt@gmail.com>"]
+name = "eframe-multinode"
+version = "0.1.2"
+authors = ["Doug Anderson <doug@peerpiper.io>"]
 edition = "2021"
 include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 rust-version = "1.80"
+description = "A PeerPiper multi-node application built using egui and efrem that runs in the browser and desktop."
 
 [package.metadata.docs.rs]
 all-features = true
