@@ -148,7 +148,8 @@ jobs:
       run: echo "CARGO_BUILD_TARGET=${{ matrix.TARGET }}" >> $GITHUB_ENV
 
     # If matrix target is x86_64-apple-darwin, use the follwoing:
-    - name: Ensure target is installed
+    - name: Ensure x86_64-apple-darwin target is installed
+      if: contains(matrix.TARGET, 'x86_64-apple-darwin')
       run: |
         rustup target add ${{ matrix.TARGET }}
         rustup default stable-${{ matrix.TARGET }}
