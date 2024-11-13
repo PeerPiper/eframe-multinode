@@ -34,5 +34,7 @@ build-peerpiper: update-remote
   cargo build --release --manifest-path ./crates/submodules/peerpiper/crates/peerpiper-server/Cargo.toml
   cp ./crates/submodules/peerpiper/target/release/peerpiper-server ./bin/peerpiper-server
 
+check:
+  ./check.sh
 
 
