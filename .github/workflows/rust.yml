@@ -126,9 +126,10 @@ jobs:
         - os: ubuntu-latest
           TARGET: x86_64-unknown-linux-gnu
 
-        - os: windows-latest
-          TARGET: x86_64-pc-windows-msvc
-          EXTENSION: .exe
+        # TEMP disabled, longest and most expensive run in CI.
+        # - os: windows-latest
+        #   TARGET: x86_64-pc-windows-msvc
+        #   EXTENSION: .exe
 
     steps:
     - name: Checkout repository
@@ -143,11 +144,22 @@ jobs:
         # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
         targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
+    - name: Set default cargo build target
+      run: echo "CARGO_BUILD_TARGET=${{ matrix.TARGET }}" >> $GITHUB_ENV
+
+    # If matrix target is x86_64-apple-darwin, use the follwoing:
+    - name: Ensure target is installed
+      run: |
+        rustup target add ${{ matrix.TARGET }}
+        rustup default stable-${{ matrix.TARGET }}
+        rustup show
+
     # For linux, it's necessary to use cross from the git repository to avoid glibc problems
     # Ref: https://github.com/cross-rs/cross/issues/1510
     - name: Install cross for linux
       if: contains(matrix.TARGET, 'linux')
       run: |
+        rustup show
         cargo install cross --git https://github.com/cross-rs/cross --rev 1b8cf50d20180c1a394099e608141480f934b7f7
 
     - name: Install cross for mac and windows
