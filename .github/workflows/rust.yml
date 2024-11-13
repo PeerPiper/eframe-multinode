@@ -145,12 +145,9 @@ jobs:
         targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || contains(matrix.TARGET, 'linux') && 'aarch64-unknown-linux-gnu,x86_64-unknown-linux-gnu' || 'x86_64-pc-windows-msvc' }}
 
     - name: Set default cargo build target
-      run: echo "CARGO_BUILD_TARGET=${{ matrix.TARGET }}" >> $GITHUB_ENV
-
-    # If matrix target is x86_64-apple-darwin, use the follwoing:
-    - name: Ensure x86_64-apple-darwin target is installed
       if: contains(matrix.TARGET, 'x86_64-apple-darwin')
       run: |
+        echo "CARGO_BUILD_TARGET=${{ matrix.TARGET }}" >> $GITHUB_ENV
         rustup target add ${{ matrix.TARGET }}
         rustup default stable-${{ matrix.TARGET }}
         rustup show
