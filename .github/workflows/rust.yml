@@ -113,8 +113,8 @@ jobs:
           TARGET: aarch64-apple-darwin
 
         # apple x86_64 
-        # - os: macos-latest
-        #   TARGET: x86_64-apple-darwin
+        - os: macos-latest
+          TARGET: x86_64-apple-darwin
 
         - os: ubuntu-latest
           TARGET: aarch64-unknown-linux-gnu
@@ -134,11 +134,12 @@ jobs:
     - name: Building ${{ matrix.TARGET }}
       run: echo "${{ matrix.TARGET }}"
 
-    - uses: actions/checkout@master
-    - name: Install build dependencies - Rustup
-      run: |
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable --profile default --target ${{ matrix.TARGET }} -y
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      
+    - name: install Rust  
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
+        targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
     # For linux, it's necessary to use cross from the git repository to avoid glibc problems
     # Ref: https://github.com/cross-rs/cross/issues/1510
