@@ -170,20 +170,20 @@ jobs:
         cross build --verbose --release --target=${{ matrix.TARGET }}
 
     - name: Rename
-      run: cp target/${{ matrix.TARGET }}/release/eframe_ci_test${{ matrix.EXTENSION }} eframe_ci_test-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+      run: cp target/${{ matrix.TARGET }}/release/eframe-multinode${{ matrix.EXTENSION }} eframe-multinode-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
 
     - uses: actions/upload-artifact@master
       with:
-        name: eframe_ci_test-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
-        path: eframe_ci_test-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+        name: eframe-multinode-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+        path: eframe-multinode-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
 
     - uses: svenstaro/upload-release-action@v2
       name: Upload binaries to release
       if: ${{ github.event_name == 'push' }}
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: eframe_ci_test-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
-        asset_name: eframe_ci_test-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+        file: eframe-multinode-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+        asset_name: eframe-multinode-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
         tag: ${{ github.ref }}
         prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
         overwrite: true

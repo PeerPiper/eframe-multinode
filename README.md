@@ -1,32 +1,16 @@
-# eframe template
+# eframe PeerPiper Multinode
 
-[![dependency status](https://deps.rs/repo/github/emilk/eframe_template/status.svg)](https://deps.rs/repo/github/emilk/eframe_template)
-[![Build Status](https://github.com/emilk/eframe_template/workflows/CI/badge.svg)](https://github.com/emilk/eframe_template/actions?workflow=CI)
-
-This is a template repo for [eframe](https://github.com/emilk/egui/tree/master/crates/eframe), a framework for writing apps using [egui](https://github.com/emilk/egui/).
-
-The goal is for this to be the simplest way to get started writing a GUI app in Rust.
+The goal is for this to be the simplest way to get started running a PeerPiper multinode (and plugins!) at home.
 
 You can compile your app natively or for the web, and share it using Github Pages.
 
 ## Getting started
 
-Start by clicking "Use this template" at https://github.com/emilk/eframe_template/ or follow [these instructions](https://docs.github.com/en/free-pro-team@latest/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template).
+This repo automatically [builds releases](https://github.com/PeerPiper/eframe-mulitnode/releases). Either build it yourself from this source, or download a pre-built one from that link.
 
-Change the name of the crate: Choose a good name for your project, and change the name to it in:
-* `Cargo.toml`
-    * Change the `package.name` from `eframe_template` to `your_crate`.
-    * Change the `package.authors`
-* `main.rs`
-    * Change `eframe_template::TemplateApp` to `your_crate::TemplateApp`
-* `index.html`
-    * Change the `<title>eframe template</title>` to `<title>your_crate</title>`. optional.
-* `assets/sw.js`
-  * Change the `'./eframe_template.js'` to `./your_crate.js` (in `filesToCache` array)
-  * Change the `'./eframe_template_bg.wasm'` to `./your_crate_bg.wasm` (in `filesToCache` array)
+It's an executable, so just "run it" and you'll see the GUI.
 
-Alternatively, you can run `fill_template.sh` which will ask for the needed names and email and perform the above patches for you. This is particularly useful if you clone this repository outside GitHub and hence cannot make use of its
-templating function.
+As the ecosystem mature, expect to see more PeerPiper plugins available for download and use. 
 
 ### Learning about egui
 
