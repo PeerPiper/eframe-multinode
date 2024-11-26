@@ -6,42 +6,19 @@ use wasm_bindgen_futures::{spawn_local, JsFuture};
 
 use egui_suspense::EguiSuspense;
 
-/// The Connect Widget
-pub fn connect(dnsaddr: &mut String) -> impl egui::Widget + '_ {
-    move |ui: &mut egui::Ui| connect_ui(ui, dnsaddr)
-}
-
-/// Serde struct for: curl --header 'accept: application/dns-json' 'https://1.1.1.1/dns-query?type=16&name=cloudflare.com'
-// {"Status":0,"TC":false,"RD":true,"RA":true,"AD":false,"CD":false,"Question":[{"name":"_dnsaddr.peerpiper.io","type":16}],"Answer":[{"name":"_dnsaddr.peerpiper.io","type":16,"TTL":300,"data":"\"dnsaddr=/ip6/2607:fea8:fec0:8526::2c81/udp/42069/webrtc-direct/certhash/uEiDEYac45bQ3DMYhAgNf5Bu-xYRDVkVgmmeJwfyEERZ4bw/p2p/12D3KooWSsrJqCDVunhDq3bV6LGSVE2f1i4xbE47483jJTPgbTED\""},{"name":"_dnsaddr.peerpiper.io","type":16,"TTL":300,"data":"\"dnsaddr=/ip6/2607:fea8:fec0:8526::2c81/udp/50562/webrtc-direct/certhash/uEiDEYac45bQ3DMYhAgNf5Bu-xYRDVkVgmmeJwfyEERZ4bw/p2p/12D3KooWSsrJqCDVunhDq3bV6LGSVE2f1i4xbE47483jJTPgbTED\""},{"name":"_dnsaddr.peerpiper.io","type":16,"TTL":300,"data":"\"dnsaddr=/ip6/2607:fea8:fec0:8526::2c81/udp/51642/webrtc-direct/certhash/uEiDEYac45bQ3DMYhAgNf5Bu-xYRDVkVgmmeJwfyEERZ4bw/p2p/12D3KooWSsrJqCDVunhDq3bV6LGSVE2f1i4xbE47483jJTPgbTED\""}]}
-#[derive(serde::Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 struct DnsTXTQuery {
-    //status: u8,
-    //tc: bool,
-    //rd: bool,
-    //ra: bool,
-    //ad: bool,
-    //cd: bool,
-    //question: Vec<Question>,
+    /// 'answer' is 'Answer' in the DNS TXT response json
+    #[serde(rename = "Answer")]
     answer: Vec<Answer>,
 }
 
-//#[derive(serde::Deserialize)]
-//struct Question {
-//    name: String,
-//    #[serde(rename = "type")]
-//    qtype: u8,
-//}
-
-#[derive(serde::Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 struct Answer {
-    //name: String,
-    //#[serde(rename = "type")]
-    //atype: u8,
-    //ttl: u32,
     data: String,
 }
 
-pub async fn fetch_dns_query(domain: String) -> Result<String, JsValue> {
+pub async fn fetch_dns_query(domain: String) -> Result<Vec<String>, JsValue> {
     let opts = RequestInit::new();
     opts.set_method("GET");
     opts.set_mode(RequestMode::Cors);
@@ -49,9 +26,6 @@ pub async fn fetch_dns_query(domain: String) -> Result<String, JsValue> {
     // take /dnsaddr/peerpiper.io and convert to _dnsaddr.peerpiper.io
     let domain = domain.replace("/dnsaddr/", "_dnsaddr.");
     let url = format!("https://1.1.1.1/dns-query?type=16&name={domain}");
-    //let url = "https://1.1.1.1/dns-query?type=16&name=cloudflare.com";
-
-    log::info!("Fetching DNS query for: {}", url);
 
     let request = Request::new_with_str_and_init(&url, &opts)?;
     request.headers().set("Accept", "application/dns-json")?;
@@ -59,75 +33,22 @@ pub async fn fetch_dns_query(domain: String) -> Result<String, JsValue> {
     let window = web_sys::window().ok_or_else(|| JsValue::from_str("no window"))?;
     let resp_value = JsFuture::from(window.fetch_with_request(&request)).await?;
     let resp: Response = resp_value.dyn_into()?;
-    //let json = JsFuture::from(resp.json()?).await?;
-    let text = JsFuture::from(resp.text()?).await?;
-    //    let multiaddrs: DnsTXTQuery = serde_wasm_bindgen::from_value(json)?;
-    // let multiaddrs: Vec<String> = multiaddrs.answer.iter().map(|a| a.data.clone()).collect();
-    Ok(text
-        .as_string()
-        .ok_or_else(|| JsValue::from_str("no text"))?)
-}
+    let json = JsFuture::from(resp.json()?).await?;
+    let multiaddrs: DnsTXTQuery = serde_wasm_bindgen::from_value(json)?;
 
-#[allow(clippy::ptr_arg)] // false positive
-pub fn connect_ui(ui: &mut egui::Ui, dnsaddr: &mut String) -> egui::Response {
-    // Generate an id for the state
-    let state_id = ui.id().with("shown");
+    log::debug!("multiaddrs: {:?}", multiaddrs);
 
-    // Get state for this widget.
-    let mut shown = ui.data_mut(|d| d.get_temp::<String>(state_id).unwrap_or_default());
-
-    log::info!("Shown: {:?}", shown);
-
-    let result = ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        if shown.is_empty() {
-            let addr = dnsaddr.to_string();
-            let mut suspense = EguiSuspense::reloadable(move |cb| {
-                let addr = addr.clone();
-                spawn_local(async move {
-                    let multiaddrs = fetch_dns_query(addr).await.map_err(|e| {
-                        log::error!("Error fetching DNS query: {:?}", e);
-                    });
-                    cb(if multiaddrs.is_ok() {
-                        let data = multiaddrs.unwrap();
-                        log::info!("Got DNS query: {:?}", data);
-                        Ok(format!("Got DNS query: {:?}", data))
-                    } else {
-                        Err("No DNS found!".to_string())
-                    });
-                });
-            });
-            suspense.ui(ui, |ui, data, state| {
-                // Update the persistent state here
-                ui.data_mut(|d| d.insert_temp(state_id, data.clone()));
-
-                log::info!("CB Data: {:?}", data);
-                ui.monospace(format!("Data: {:?}", data));
-
-                if ui.button("Reload").clicked() {
-                    state.reload();
-                }
-            })
-        } else {
-            // show the data, multiline text
-            ui.monospace(shown.as_str());
-            Some(if ui.button("Clear").clicked() {
-                shown.clear();
-                // Update the persistent state here
-                ui.data_mut(|d| d.insert_temp(state_id, shown.clone()));
-            })
-        }
-    });
-
-    log::info!("Result: {:?}", result);
-
-    // All done! Return the interaction response so the user can check what happened
-    // (hovered, clicked, …) and maybe show a tooltip:
-    result.response
+    let multiaddrs: Vec<String> = multiaddrs
+        .answer
+        .iter()
+        .map(|a| a.data.replace("dnsaddr=", "").trim_matches('"').to_string())
+        .collect();
+    Ok(multiaddrs)
 }
 
 #[derive(Default, Clone)]
 struct FetchState {
-    response: String,
+    response: Vec<String>,
     is_loading: bool,
     error: Option<String>,
 }
@@ -145,8 +66,8 @@ pub fn fetch(ctx: &egui::Context, ui: &mut egui::Ui, url: &mut String) {
 
     if ui.button("Fetch").clicked() {
         // Update fetch state
-        fetch_state.response = String::new();
-        fetch_state.error = None;
+        fetch_state.response = Default::default();
+        fetch_state.error = Default::default();
         fetch_state.is_loading = true;
 
         // Clone URL for async operation
@@ -163,7 +84,6 @@ pub fn fetch(ctx: &egui::Context, ui: &mut egui::Ui, url: &mut String) {
                 }
                 Err(e) => {
                     fetch_state_clone.error = Some(format!("Error: {:?}", e));
-                    fetch_state_clone.response = format!("Error: {:?}", e);
                 }
             }
 
@@ -187,11 +107,8 @@ pub fn fetch(ctx: &egui::Context, ui: &mut egui::Ui, url: &mut String) {
 
     // Response display
     egui::ScrollArea::vertical().show(ui, |ui| {
-        ui.add_sized(
-            [ui.available_width(), 300.0],
-            egui::TextEdit::multiline(&mut fetch_state.response)
-                .desired_rows(10)
-                .lock_focus(true),
-        );
+        for line in &fetch_state.response {
+            ui.label(line);
+        }
     });
 }
