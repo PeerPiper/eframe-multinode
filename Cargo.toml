@@ -43,8 +43,17 @@ rfd = "0.15" # Rust File Dialog
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3.70", features = ["FileReader"] }
+web-sys = { version = "0.3.70", features = [
+  "FileReader",
+  "Request",
+  "RequestInit",
+  "RequestMode",
+  "Response",
+  "Headers",
+] }
 getrandom = { version = "0.2", features = ["js"] }
+egui_suspense = "0.6.0"
+serde-wasm-bindgen = "0.6"
 
 [profile.release]
 opt-level = 2 # fast and small wasm

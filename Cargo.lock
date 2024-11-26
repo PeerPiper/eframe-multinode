@@ -1262,6 +1262,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "concat-idents"
+version = "1.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f76990911f2267d837d9d0ad060aa63aaad170af40904b29461734c339030d4d"
+dependencies = [
+ "quote",
+ "syn 2.0.87",
+]
+
+[[package]]
 name = "concurrent-queue"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1908,6 +1918,7 @@ version = "0.1.2"
 dependencies = [
  "eframe",
  "egui",
+ "egui_suspense",
  "env_logger",
  "getrandom",
  "log",
@@ -1915,6 +1926,7 @@ dependencies = [
  "rfd",
  "seed-keeper-core",
  "serde",
+ "serde-wasm-bindgen",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -1971,6 +1983,27 @@ dependencies = [
  "memoffset 0.9.1",
  "wasm-bindgen",
  "web-sys",
+]
+
+[[package]]
+name = "egui_inbox"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3616e93d38d5cdd4ef02fb0df5d6e982e3dc2eae71f7c93a31f6265f141be1da"
+dependencies = [
+ "egui",
+ "parking_lot",
+]
+
+[[package]]
+name = "egui_suspense"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19f687518a477e9163ef5088ecc410ada1b40e76846bff2505f798198dcdddd1"
+dependencies = [
+ "egui",
+ "egui_inbox",
+ "hello_egui_utils",
 ]
 
 [[package]]
@@ -2691,6 +2724,16 @@ name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
+
+[[package]]
+name = "hello_egui_utils"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b41969e8df68bfb60976e513b5aa8c351fc979929ac59f39e57d568067ac3fc"
+dependencies = [
+ "concat-idents",
+ "egui",
+]
 
 [[package]]
 name = "hermit-abi"

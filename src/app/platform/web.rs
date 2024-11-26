@@ -5,6 +5,8 @@
 //! This module contains the web specific code for the platform.
 //! Instead of spinning up a native node, this code would connect to a remote node
 //! using peerpiper-browser.
+mod widget;
+
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -41,12 +43,16 @@ impl ContextSet {
 pub struct Platform {
     /// The Context
     ctx: Rc<RefCell<ContextSet>>,
+
+    /// The node multiaddr to which we are connected
+    node_multiaddr: String,
 }
 
 impl Default for Platform {
     fn default() -> Self {
         Self {
             ctx: Rc::new(RefCell::new(ContextSet::new())),
+            node_multiaddr: "/dnsaddr/peerpiper.io".to_string(),
         }
     }
 }
@@ -66,10 +72,8 @@ impl Platform {
     }
 
     /// Show the GUI for this platform
-    pub fn show(&self, _ctx: &egui::Context, ui: &mut egui::Ui) {
-        ui.horizontal(|ui| {
-            ui.label("Connect to multinode: ");
-        });
+    pub fn show(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
+        widget::fetch(ctx, ui, &mut self.node_multiaddr);
     }
 
     /// Loads the plugin (TODO)
