@@ -98,7 +98,7 @@ impl Platform {
         self.ctx.lock().unwrap().set
     }
 
-    /// Stes the ctx
+    /// Sets the ctx, so that the platform can trigger repaints on events.
     pub(crate) fn set_egui_ctx(&mut self, ctx: egui::Context) {
         self.ctx.lock().unwrap().ctx = ctx;
         self.ctx.lock().unwrap().set = true;
