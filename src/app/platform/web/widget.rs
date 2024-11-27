@@ -2,9 +2,7 @@
 
 use eframe::wasm_bindgen::prelude::*;
 use eframe::web_sys::{Request, RequestInit, RequestMode, Response};
-use wasm_bindgen_futures::{spawn_local, JsFuture};
-
-use egui_suspense::EguiSuspense;
+use wasm_bindgen_futures::JsFuture;
 
 #[derive(Debug, serde::Deserialize)]
 struct DnsTXTQuery {
