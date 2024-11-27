@@ -1918,6 +1918,7 @@ version = "0.1.2"
 dependencies = [
  "eframe",
  "egui",
+ "egui_material_icons",
  "egui_suspense",
  "env_logger",
  "getrandom",
@@ -1993,6 +1994,15 @@ checksum = "3616e93d38d5cdd4ef02fb0df5d6e982e3dc2eae71f7c93a31f6265f141be1da"
 dependencies = [
  "egui",
  "parking_lot",
+]
+
+[[package]]
+name = "egui_material_icons"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4ae4b45e35dc20195725828a05f7c8031dcefb60b5ee854ef0caa8df9139923"
+dependencies = [
+ "egui",
 ]
 
 [[package]]

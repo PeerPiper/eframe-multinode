@@ -2,6 +2,14 @@ mod error;
 mod file_dialog;
 mod platform;
 
+use egui::text::LayoutJob;
+use egui::FontId;
+use egui::TextFormat;
+use egui::TextStyle;
+use egui::Widget as _;
+use egui_material_icons::icon_button;
+use egui_material_icons::icons;
+
 pub(crate) use platform::Platform;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -59,6 +67,7 @@ impl eframe::App for MultinodeApp {
 
         // pass the ctx to the platform
         if !self.platform.egui_ctx() {
+            egui_material_icons::initialize(ctx);
             self.platform.set_egui_ctx(ctx.clone());
         }
 
@@ -107,8 +116,87 @@ impl eframe::App for MultinodeApp {
             }
 
             ui.separator();
+            ui.horizontal(|ui| {
+                icon_button(ui, icons::ICON_ADD);
+                icon_button(ui, icons::ICON_REMOVE);
+                icon_button(ui, icons::ICON_IMAGE);
+                ui.label("Ayyy")
+            });
 
-            // #[cfg(not(target_arch = "wasm32"))]
+            ui.group(|ui| {
+                ui.horizontal(|ui| {
+                    egui::Label::new(
+                        egui::RichText::new(icons::ICON_FAVORITE)
+                            .size(16.0)
+                            .family(egui::FontFamily::Proportional),
+                    )
+                    .ui(ui);
+                    egui::Label::new("2").ui(ui);
+                });
+            });
+
+            ui.group(|ui| {
+                ui.horizontal(|ui| {
+                    egui::Label::new(
+                        egui::RichText::new(icons::ICON_SETTINGS)
+                            .size(16.0)
+                            .family(egui::FontFamily::Proportional),
+                    )
+                    .ui(ui);
+                    egui::Label::new("Settings").ui(ui);
+                });
+            })
+            .response
+            .on_hover_cursor(egui::CursorIcon::PointingHand);
+
+            if ui
+                .add(egui::Button::new(
+                    // Settings button
+                    egui::RichText::new(format!("{} Settings", icons::ICON_SETTINGS))
+                        .size(16.0)
+                        .family(egui::FontFamily::Proportional),
+                ))
+                .on_hover_cursor(egui::CursorIcon::PointingHand)
+                .clicked()
+            {
+                // Handle click event here
+                tracing::info!("Settings 2 clicked");
+            }
+            ui.horizontal(|ui| {
+                let mut job = LayoutJob::default();
+                job.append(
+                    icons::ICON_SETTINGS,
+                    0.0,
+                    TextFormat {
+                        font_id: FontId::proportional(16.0),
+                        color: ui.visuals().text_color(),
+                        ..Default::default()
+                    },
+                );
+                job.append(
+                    " Settings",
+                    0.0,
+                    TextFormat {
+                        font_id: FontId::proportional(
+                            ui.style().text_styles[&TextStyle::Body].size,
+                        ),
+                        color: ui.visuals().text_color(),
+                        ..Default::default()
+                    },
+                );
+
+                if ui
+                    .add_sized(
+                        ui.spacing().button_padding, // This sets the minimum size
+                        egui::Button::new(job),
+                    )
+                    .clicked()
+                {
+                    // Handle button click
+                    tracing::info!("Settings 3 clicked");
+                }
+            });
+
             ui.vertical(|ui| {
                 self.platform.show(ctx, ui);
             });
