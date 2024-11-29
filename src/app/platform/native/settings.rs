@@ -160,8 +160,6 @@ impl Settings {
             .clicked()
         {
             // Handle click event here
-            tracing::info!("Settings 2 clicked");
-
             // show a Window with the settings
             self.open = true;
         }
