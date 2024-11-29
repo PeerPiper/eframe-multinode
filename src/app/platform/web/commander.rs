@@ -1,6 +1,8 @@
 //! The PeerPiper Command sender for the Browser
+#![allow(dead_code)]
+
+use super::web_error::WebError;
 use crate::app::platform;
-use eframe::wasm_bindgen::JsValue;
 use futures::SinkExt;
 use futures::{
     channel::{
@@ -14,8 +16,6 @@ use peerpiper_browser::opfs::OPFSBlockstore;
 use peerpiper_core::events::PublicEvent;
 use peerpiper_core::Commander;
 
-const MAX_CHANNELS: usize = 16;
-
 pub struct PeerPiper {
     // / Make interior mutability possible for the Commander struct with [RefCell]
     // / This way we can keep the idiomatic Rust way of borrowing and mutating with &self
@@ -23,10 +23,10 @@ pub struct PeerPiper {
 }
 
 impl PeerPiper {
-    pub async fn new(name: String) -> Result<PeerPiper, JsValue> {
+    pub async fn new() -> Result<PeerPiper, WebError> {
         let blockstore = OPFSBlockstore::new()
             .await
-            .map_err(|err| JsValue::from_str(&format!("Error opening blockstore: {:?}", err)))?;
+            .map_err(|e| WebError::OPFSBlockstore(e.as_string().unwrap_or_default()))?;
         let commander = Commander::new(blockstore);
         Ok(Self { commander })
     }
@@ -37,8 +37,9 @@ impl PeerPiper {
         &mut self,
         libp2p_endpoints: Vec<String>,
         mut on_event: Sender<PublicEvent>,
-    ) -> Result<(), JsValue> {
-        let (tx_evts, mut rx_evts) = mpsc::channel(MAX_CHANNELS);
+    ) -> Result<(), WebError> {
+        // 16 is arbitrary, but should be enough for now
+        let (tx_evts, mut rx_evts) = mpsc::channel(16);
 
         // client sync oneshot
         let (tx_client, rx_client) = oneshot::channel();
@@ -54,26 +55,17 @@ impl PeerPiper {
         });
 
         // wait on rx_client to get the client handle
-        let client_handle = rx_client
-            .await
-            .map_err(|e| JsValue::from_str(&format!("Error getting client handle: {:?}", e)))?;
+        let client_handle = rx_client.await?;
 
         self.commander
             .with_network(command_sender)
             .with_client(client_handle);
 
-        let this = JsValue::null();
-
         while let Some(event) = rx_evts.next().await {
             match event {
                 peerpiper_core::events::Events::Outer(event) => {
-                    tracing::info!("[Browser] Received event: {:?}", &event);
-                    let evt = serde_wasm_bindgen::to_value(&event).map_err(|e| {
-                        JsValue::from_str(&format!("Failed to serialize event: {:?}", e))
-                    })?;
-                    on_event.send(event).await.map_err(|e| {
-                        JsValue::from_str(&format!("Failed to send event: {:?}", e))
-                    })?;
+                    log::debug!("[Browser] Received event: {:?}", &event);
+                    on_event.send(event).await?;
                 }
                 _ => {}
             }

@@ -7,8 +7,10 @@
 //! using peerpiper-browser.
 mod commander;
 mod settings;
+mod web_error;
 mod widget;
 
+use crate::app::platform;
 use commander::PeerPiper;
 use multiaddr::Multiaddr;
 pub(crate) use settings::Settings;
@@ -45,33 +47,34 @@ impl ContextSet {
 }
 
 #[derive(Clone)]
+// allow unused code
+#[allow(dead_code)]
 pub struct Platform {
     /// The Context
     ctx: Rc<RefCell<ContextSet>>,
-
     /// The node multiaddr to which we are connected
     node_multiaddr: String,
-    ///// PeerPiper instance. It is generated from a spawned task.
-    //peerpiper: Rc<RefCell<Option<PeerPiper>>>,
+    /// PeerPiper instance. It is generated from a spawned task.
+    peerpiper: Rc<RefCell<Option<PeerPiper>>>,
 }
 
 impl Default for Platform {
     fn default() -> Self {
-        //let peerpiper = Rc::new(RefCell::new(None));
-        //let peerpiper_clone = peerpiper.clone();
-        //// new PeerPiper with built-in Commander and BrowserBlockStore
-        //platform::spawn(async move {
-        //    let Ok(piper) = PeerPiper::new("eframe-peerpiper-mulitnode".to_string()).await else {
-        //        log::error!("Error creating PeerPiper BrowserBlockStore instance");
-        //        return;
-        //    };
-        //    peerpiper_clone.borrow_mut().replace(piper);
-        //});
+        let peerpiper = Rc::new(RefCell::new(None));
+        let peerpiper_clone = peerpiper.clone();
+        // new PeerPiper with built-in Commander and BrowserBlockStore
+        platform::spawn(async move {
+            let Ok(piper) = PeerPiper::new().await else {
+                log::error!("Error creating PeerPiper BrowserBlockStore instance");
+                return;
+            };
+            peerpiper_clone.borrow_mut().replace(piper);
+        });
 
         Self {
             ctx: Rc::new(RefCell::new(ContextSet::new())),
             node_multiaddr: "/dnsaddr/peerpiper.io".to_string(),
-            //peerpiper,
+            peerpiper,
         }
     }
 }
@@ -100,6 +103,8 @@ impl Platform {
     /// Show the GUI for this platform
     pub fn show(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
         widget::fetch(ctx, ui, &mut self.node_multiaddr);
+
+        // TODO: use peerpiper.connect(libp2p_endpoints, on_event) to connect to the network
     }
 
     /// Loads the plugin (TODO)
