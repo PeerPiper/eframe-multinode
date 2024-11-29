@@ -26,6 +26,10 @@ serde = { version = "1", features = ["derive"] }
 tracing = { version = "0.1" }
 seed-keeper-core = { git = "https://github.com/DougAnderson444/seed-keeper.git" }
 egui_material_icons = "0.1.0"
+cloudflare = { version = "0.12.0", git = "https://github.com/cloudflare/cloudflare-rs.git" }
+multiaddr = "0.18"
+thiserror = "2.0"
+bon = "3.1.1"                                                                                # for easy builder pattern
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -55,6 +59,9 @@ web-sys = { version = "0.3.70", features = [
 getrandom = { version = "0.2", features = ["js"] }
 egui_suspense = "0.6.0"
 serde-wasm-bindgen = "0.6"
+peerpiper-browser = { git = "https://github.com/PeerPiper/peerpiper.git" }
+peerpiper-core = { git = "https://github.com/PeerPiper/peerpiper.git" }
+futures = "0.3"
 
 [profile.release]
 opt-level = 2 # fast and small wasm

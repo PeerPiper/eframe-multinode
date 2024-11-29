@@ -2,8 +2,13 @@
 //!
 //! For example, a native node will only be available here. Whereas the browser needs to connect
 //! to a remote node, which is handled in the `web` module.
+mod cloudflare;
+mod settings;
 
-use peerpiper_plugins::tokio::{PluggablePiper, PluginLoader};
+use multiaddr::Multiaddr;
+pub(crate) use settings::Settings;
+
+use peerpiper_plugins::tokio::{ExternalEvents, PluggablePiper, PluginLoader};
 use std::sync::{Arc, Mutex};
 
 // use peerpiper_plugins::{PluggablePiper};
@@ -43,23 +48,35 @@ pub(crate) struct Platform {
     ctx: Arc<Mutex<ContextSet>>,
 
     loader: PluginLoader,
+
+    addr: Arc<Mutex<Option<Multiaddr>>>,
 }
 
 impl Default for Platform {
     fn default() -> Self {
         let log = Arc::new(Mutex::new(Vec::new()));
         let ctx: Arc<Mutex<ContextSet>> = Arc::new(Mutex::new(ContextSet::new()));
+        let addr = Arc::new(Mutex::new(None));
 
         let (mut pluggable, command_receiver, loader, mut plugin_evts) = PluggablePiper::new();
 
         let log_clone = log.clone();
         let ctx_clone = ctx.clone();
+        let addr_clone = addr.clone();
 
         // task for listening on plugin events and updating the log accoringly
         tokio::task::spawn(async move {
             while let Some(event) = plugin_evts.recv().await {
-                log_clone.lock().unwrap().push(event);
+                let msg = format!("{:?}", event);
+                tracing::debug!("Received event: {:?}", msg);
+                log_clone.lock().unwrap().push(msg);
                 ctx_clone.lock().unwrap().request_repaint();
+
+                if let ExternalEvents::Address(addr) = event {
+                    tracing::debug!("Received Node Address: {:?}", addr);
+                    let mut lock = addr_clone.lock().unwrap();
+                    *lock = Some(addr);
+                }
             }
         });
 
@@ -70,7 +87,12 @@ impl Default for Platform {
             });
         });
 
-        Self { log, ctx, loader }
+        Self {
+            log,
+            ctx,
+            loader,
+            addr,
+        }
     }
 }
 
@@ -124,5 +146,9 @@ impl Platform {
                     });
                 });
             });
+    }
+
+    pub(crate) fn addr(&self) -> Option<Multiaddr> {
+        self.addr.lock().unwrap().clone()
     }
 }

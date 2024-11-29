@@ -1,5 +1,7 @@
 //! Platform Module
 
+use std::future::Future;
+
 /// Native Platform Module
 #[cfg(not(target_arch = "wasm32"))]
 mod native;
@@ -15,4 +17,14 @@ mod web;
 #[cfg(target_arch = "wasm32")]
 use web as platform;
 
-pub(crate) use platform::Platform;
+pub(crate) use platform::{Platform, Settings};
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn spawn(f: impl Future<Output = ()> + Send + 'static) {
+    tokio::spawn(f);
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn spawn(f: impl Future<Output = ()> + 'static) {
+    wasm_bindgen_futures::spawn_local(f);
+}

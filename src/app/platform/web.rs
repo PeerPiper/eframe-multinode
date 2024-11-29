@@ -5,8 +5,13 @@
 //! This module contains the web specific code for the platform.
 //! Instead of spinning up a native node, this code would connect to a remote node
 //! using peerpiper-browser.
+mod commander;
+mod settings;
 mod widget;
 
+use commander::PeerPiper;
+use multiaddr::Multiaddr;
+pub(crate) use settings::Settings;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -46,19 +51,40 @@ pub struct Platform {
 
     /// The node multiaddr to which we are connected
     node_multiaddr: String,
+    ///// PeerPiper instance. It is generated from a spawned task.
+    //peerpiper: Rc<RefCell<Option<PeerPiper>>>,
 }
 
 impl Default for Platform {
     fn default() -> Self {
+        //let peerpiper = Rc::new(RefCell::new(None));
+        //let peerpiper_clone = peerpiper.clone();
+        //// new PeerPiper with built-in Commander and BrowserBlockStore
+        //platform::spawn(async move {
+        //    let Ok(piper) = PeerPiper::new("eframe-peerpiper-mulitnode".to_string()).await else {
+        //        log::error!("Error creating PeerPiper BrowserBlockStore instance");
+        //        return;
+        //    };
+        //    peerpiper_clone.borrow_mut().replace(piper);
+        //});
+
         Self {
             ctx: Rc::new(RefCell::new(ContextSet::new())),
             node_multiaddr: "/dnsaddr/peerpiper.io".to_string(),
+            //peerpiper,
         }
     }
 }
 
 impl Platform {
     // pub fn close(&mut self) {}
+
+    /// Address of the node. This will eventually be the relay address through
+    /// a server node since this is the Browser side of things.
+    pub fn addr(&self) -> Option<Multiaddr> {
+        // TODO: Switch to relay address once connected to server node.
+        Multiaddr::try_from(self.node_multiaddr.clone()).ok()
+    }
 
     /// Returns whether the ctx is set or not
     pub fn egui_ctx(&self) -> bool {

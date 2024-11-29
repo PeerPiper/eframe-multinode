@@ -1,41 +1,24 @@
 mod error;
 mod file_dialog;
 mod platform;
-
-use egui::text::LayoutJob;
-use egui::FontId;
-use egui::TextFormat;
-use egui::TextStyle;
-use egui::Widget as _;
-use egui_material_icons::icon_button;
-use egui_material_icons::icons;
+mod widgets;
 
 pub(crate) use platform::Platform;
+use platform::Settings;
+
+const APP_KEY: &str = concat!("eframe-app-", env!("CARGO_PKG_NAME"));
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Default, serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct MultinodeApp {
-    // Example stuff:
-    label: String,
-
-    #[serde(skip)]
     /// Platform  specific handlers for native and web     
+    #[serde(skip)]
     platform: Platform,
 
     file_dialog: file_dialog::FileDialog,
-    // Manages the plugins that have been loaded.
-}
 
-impl Default for MultinodeApp {
-    fn default() -> Self {
-        Self {
-            // Example stuff:
-            label: "Hello World!".to_owned(),
-            platform: Default::default(),
-            file_dialog: Default::default(),
-        }
-    }
+    settings: Settings,
 }
 
 impl MultinodeApp {
@@ -44,12 +27,18 @@ impl MultinodeApp {
         // This is also where you can customize the look and feel of egui using
         // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
 
+        eprintln!("app_key: {}", APP_KEY);
+
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
         if let Some(storage) = cc.storage {
-            return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+            if let Some(app) = eframe::get_value(storage, APP_KEY) {
+                tracing::info!("💾 Loaded app state from disk");
+                return app;
+            }
         }
 
+        tracing::info!("🆕 ⛔ No app state found on disk");
         Default::default()
     }
 }
@@ -57,7 +46,8 @@ impl MultinodeApp {
 impl eframe::App for MultinodeApp {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, eframe::APP_KEY, self);
+        tracing::info!("💾 Saving app state");
+        eframe::set_value(storage, APP_KEY, self);
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -105,7 +95,7 @@ impl eframe::App for MultinodeApp {
             // We needs a wallet widget first, to unlock with username and password.
 
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("Load Server Node Plugin");
+            ui.heading("Load Plugin");
 
             let platform_clone = self.platform.clone();
             let on_load_callback = move |name, bytes| {
@@ -115,89 +105,11 @@ impl eframe::App for MultinodeApp {
                 tracing::error!("Failed to open file dialog: {:?}", e);
             }
 
-            ui.separator();
-            ui.horizontal(|ui| {
-                icon_button(ui, icons::ICON_ADD);
-                icon_button(ui, icons::ICON_REMOVE);
-                icon_button(ui, icons::ICON_IMAGE);
-                ui.label("Ayyy")
-            });
-
-            ui.group(|ui| {
-                ui.horizontal(|ui| {
-                    egui::Label::new(
-                        egui::RichText::new(icons::ICON_FAVORITE)
-                            .size(16.0)
-                            .family(egui::FontFamily::Proportional),
-                    )
-                    .ui(ui);
-                    egui::Label::new("2").ui(ui);
-                });
-            });
-
-            ui.group(|ui| {
-                ui.horizontal(|ui| {
-                    egui::Label::new(
-                        egui::RichText::new(icons::ICON_SETTINGS)
-                            .size(16.0)
-                            .family(egui::FontFamily::Proportional),
-                    )
-                    .ui(ui);
-                    egui::Label::new("Settings").ui(ui);
-                });
-            })
-            .response
-            .on_hover_cursor(egui::CursorIcon::PointingHand);
-
-            if ui
-                .add(egui::Button::new(
-                    // Settings button
-                    egui::RichText::new(format!("{} Settings", icons::ICON_SETTINGS))
-                        .size(16.0)
-                        .family(egui::FontFamily::Proportional),
-                ))
-                .on_hover_cursor(egui::CursorIcon::PointingHand)
-                .clicked()
-            {
-                // Handle click event here
-                tracing::info!("Settings 2 clicked");
-            }
-            ui.horizontal(|ui| {
-                let mut job = LayoutJob::default();
-                job.append(
-                    icons::ICON_SETTINGS,
-                    0.0,
-                    TextFormat {
-                        font_id: FontId::proportional(16.0),
-                        color: ui.visuals().text_color(),
-                        ..Default::default()
-                    },
-                );
-                job.append(
-                    " Settings",
-                    0.0,
-                    TextFormat {
-                        font_id: FontId::proportional(
-                            ui.style().text_styles[&TextStyle::Body].size,
-                        ),
-                        color: ui.visuals().text_color(),
-                        ..Default::default()
-                    },
-                );
-
-                if ui
-                    .add_sized(
-                        ui.spacing().button_padding, // This sets the minimum size
-                        egui::Button::new(job),
-                    )
-                    .clicked()
-                {
-                    // Handle button click
-                    tracing::info!("Settings 3 clicked");
-                }
-            });
-
             ui.vertical(|ui| {
+                if let Some(addr) = self.platform.addr() {
+                    ui.label(format!("Node Address: {:?}", addr));
+                    self.settings.show(ctx, ui, &addr);
+                }
                 self.platform.show(ctx, ui);
             });
         });

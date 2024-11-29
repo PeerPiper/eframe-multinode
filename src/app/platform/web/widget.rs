@@ -1,5 +1,5 @@
 //! Web Widget(s) for the web platform.
-
+use crate::app::platform;
 use eframe::wasm_bindgen::prelude::*;
 use eframe::web_sys::{Request, RequestInit, RequestMode, Response};
 use wasm_bindgen_futures::JsFuture;
@@ -74,7 +74,7 @@ pub fn fetch(ctx: &egui::Context, ui: &mut egui::Ui, url: &mut String) {
 
         let mut fetch_state_clone = fetch_state.clone();
 
-        wasm_bindgen_futures::spawn_local(async move {
+        platform::spawn(async move {
             // Fetch data
             match fetch_dns_query(url).await {
                 Ok(data) => {

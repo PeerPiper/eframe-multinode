@@ -23,7 +23,7 @@ async fn main() -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        "PeerPiper Multinode",
+        "PeerPiper-Multinode",
         native_options,
         Box::new(|cc| Ok(Box::new(eframe_multinode::MultinodeApp::new(cc)))),
     )

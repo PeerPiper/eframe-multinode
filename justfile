@@ -37,4 +37,6 @@ build-peerpiper: update-remote
 check:
   ./check.sh
 
+check32:
+  cargo check --target wasm32-unknown-unknown
 
