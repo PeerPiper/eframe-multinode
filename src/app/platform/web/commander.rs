@@ -12,9 +12,9 @@ use futures::{
     StreamExt,
 };
 use peerpiper_browser::opfs::OPFSBlockstore;
-//use peerpiper_core::events::PeerPiperCommand;
+use peerpiper_core::events::PeerPiperCommand;
 use peerpiper_core::events::PublicEvent;
-use peerpiper_core::Commander;
+use peerpiper_core::{Commander, ReturnValues};
 
 pub struct PeerPiper {
     // / Make interior mutability possible for the Commander struct with [RefCell]
@@ -29,6 +29,15 @@ impl PeerPiper {
             .map_err(|e| WebError::OPFSBlockstore(e.as_string().unwrap_or_default()))?;
         let commander = Commander::new(blockstore);
         Ok(Self { commander })
+    }
+
+    /// Send Commands to PeerPiper whether connected or not.
+    ///
+    /// Throws an error if network command are sent before connecting to the network.
+    ///
+    /// put and get can store and retrieve data locally without network connection.
+    pub async fn command(&mut self, command: PeerPiperCommand) -> Result<ReturnValues, WebError> {
+        Ok(self.commander.order(command).await?)
     }
 
     /// Try to connect to the list of endpoints.
