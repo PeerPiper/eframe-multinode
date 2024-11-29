@@ -1,7 +1,7 @@
 mod error;
 mod file_dialog;
 mod platform;
-mod widgets;
+//mod widgets;
 
 pub(crate) use platform::Platform;
 use platform::Settings;
