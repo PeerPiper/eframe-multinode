@@ -27,9 +27,12 @@ tracing = { version = "0.1" }
 seed-keeper-core = { git = "https://github.com/DougAnderson444/seed-keeper.git" }
 egui_material_icons = "0.1.0"
 cloudflare = { version = "0.12.0", git = "https://github.com/cloudflare/cloudflare-rs.git" }
+reqwest = { version = "0.11.27", default-features = false, features = [
+  "native-tls-vendored", # worksaround openssl issue in cross in Docker image
+] }
 multiaddr = "0.18"
 thiserror = "2.0"
-bon = "3.1.1"                                                                                # for easy builder pattern
+bon = "3.1.1" # for easy builder pattern
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
