@@ -176,6 +176,8 @@ jobs:
 
     - name: Build
       run: |
+        export PKG_CONFIG_PATH=$PKG_CONFIG_PATH
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
         cross build --verbose --release --target=${{ matrix.TARGET }}
 
     - name: Rename
