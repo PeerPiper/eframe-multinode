@@ -155,6 +155,11 @@ jobs:
       if: contains(matrix.TARGET, 'linux')
       run: sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev pkg-config
 
+    - name: Check OpenSSL pkg-config file
+      run: |
+        ls -l /usr/lib/${{ matrix.TARGET }}/pkgconfig/openssl.pc || echo "No openssl.pc found"
+        pkg-config --libs --cflags openssl || echo "pkg-config failed to find OpenSSL"
+
     - name: Set PKG_CONFIG_PATH
       if: contains(matrix.TARGET, 'linux')
       run: echo "PKG_CONFIG_PATH=/usr/lib/${{ matrix.TARGET }}/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
@@ -174,6 +179,8 @@ jobs:
     - name: Build
       run: |
         export OPENSSL_DIR=/usr
+        export OPENSSL_LIB_DIR=/usr/lib/${{ matrix.TARGET }}
+        export OPENSSL_INCLUDE_DIR=/usr/include/openssl
         cross build --verbose --release --target=${{ matrix.TARGET }}
 
     - name: Rename
