@@ -155,10 +155,9 @@ jobs:
       if: contains(matrix.TARGET, 'linux')
       run: sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev pkg-config
 
-
     - name: Set PKG_CONFIG_PATH
       if: contains(matrix.TARGET, 'linux')
-      run: echo "PKG_CONFIG_PATH=/usr/lib/pkgconfig" >> $GITHUB_ENV
+      run: echo "PKG_CONFIG_PATH=/usr/lib/${{ matrix.TARGET }}/pkgconfig" >> $GITHUB_ENV
 
     # For linux, it's necessary to use cross from the git repository to avoid glibc problems
     # Ref: https://github.com/cross-rs/cross/issues/1510
