@@ -151,9 +151,21 @@ jobs:
         rustup target add ${{ matrix.TARGET }}
         rustup default stable-${{ matrix.TARGET }}
 
+    - name: Check OpenSSL pkg-config file
+      run: |
+        find /usr -name openssl.pc
+        pkg-config --list-all | grep openssl
+
     - name: Install SSL
       if: contains(matrix.TARGET, 'linux')
-      run: sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev pkg-config
+      run: |
+        sudo apt-get update
+        sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev pkg-config
+
+    - name: Check OpenSSL configuration
+      run: |
+        pkg-config --modversion openssl
+        pkg-config --cflags --libs openssl
 
     - name: Check OpenSSL pkg-config file
       run: |
