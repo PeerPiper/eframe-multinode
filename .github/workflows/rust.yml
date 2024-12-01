@@ -151,15 +151,16 @@ jobs:
         rustup target add ${{ matrix.TARGET }}
         rustup default stable-${{ matrix.TARGET }}
 
-    # - name: Check OpenSSL pkg-config file
-    #   if: contains(matrix.TARGET, 'linux')
-    #   run: |
-    #     find /usr -name openssl.pc
-    #     pkg-config --list-all | grep openssl
-
     - name: Set PKG_CONFIG_PATH
       if: contains(matrix.TARGET, 'linux')
       run: echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
+
+    - name: Check OpenSSL pkg-config file, and Show PKG_CONFIG_PATH
+      if: contains(matrix.TARGET, 'linux')
+      run: |
+        find /usr -name openssl.pc
+        pkg-config --list-all | grep openssl
+        echo $PKG_CONFIG_PATH
 
     # For linux, it's necessary to use cross from the git repository to avoid glibc problems
     # Ref: https://github.com/cross-rs/cross/issues/1510
@@ -173,19 +174,8 @@ jobs:
       run: |
         cargo install cross
 
-    - name: Debug SSL Environment Vars
-      if: contains(matrix.TARGET, 'linux')
-      run: |
-        echo "PKG_CONFIG_PATH: $PKG_CONFIG_PATH"
-        echo "OPENSSL_DIR: $OPENSSL_DIR"
-        env | grep SSL
-        pkg-config --debug --print-errors --cflags --libs openssl
-
     - name: Build
       run: |
-        export OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu
-        export OPENSSL_INCLUDE_DIR=/usr/include/openssl
-        export OPENSSL_DIR=/usr
         cross build --verbose --release --target=${{ matrix.TARGET }}
 
     - name: Rename
