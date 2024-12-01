@@ -138,7 +138,7 @@ jobs:
     - name: Building ${{ matrix.TARGET }}
       run: echo "${{ matrix.TARGET }}"
       
-    - name: install Rust  
+    - name: Install Rust  
       uses: dtolnay/rust-toolchain@stable
       with:
         # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
@@ -151,11 +151,11 @@ jobs:
         rustup target add ${{ matrix.TARGET }}
         rustup default stable-${{ matrix.TARGET }}
 
-    - name: Check OpenSSL pkg-config file
-      if: contains(matrix.TARGET, 'linux')
-      run: |
-        find /usr -name openssl.pc
-        pkg-config --list-all | grep openssl
+    # - name: Check OpenSSL pkg-config file
+    #   if: contains(matrix.TARGET, 'linux')
+    #   run: |
+    #     find /usr -name openssl.pc
+    #     pkg-config --list-all | grep openssl
 
     - name: Check OpenSSL configuration
       if: contains(matrix.TARGET, 'linux')
@@ -165,7 +165,7 @@ jobs:
 
     - name: Set PKG_CONFIG_PATH
       if: contains(matrix.TARGET, 'linux')
-      run: echo "PKG_CONFIG_PATH=/usr/lib/${{ matrix.TARGET }}/pkgconfig" >> $GITHUB_ENV
+      run: echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
 
     # For linux, it's necessary to use cross from the git repository to avoid glibc problems
     # Ref: https://github.com/cross-rs/cross/issues/1510
@@ -181,7 +181,7 @@ jobs:
 
     - name: Build
       run: |
-        export PKG_CONFIG_PATH=/usr/lib/${{ matrix.TARGET }}/pkgconfig:$PKG_CONFIG_PATH
+        export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH
         cross build --verbose --release --target=${{ matrix.TARGET }}
 
     - name: Rename
