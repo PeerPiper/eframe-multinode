@@ -153,7 +153,7 @@ jobs:
 
     - name: Set PKG_CONFIG_PATH
       if: contains(matrix.TARGET, 'linux')
-      run: echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
+      run: echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
     - name: Check OpenSSL pkg-config file, and Show PKG_CONFIG_PATH
       if: contains(matrix.TARGET, 'linux')
@@ -176,8 +176,6 @@ jobs:
 
     - name: Build
       run: |
-        export PKG_CONFIG_PATH=$PKG_CONFIG_PATH
-        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
         cross build --verbose --release --target=${{ matrix.TARGET }}
 
     - name: Rename
