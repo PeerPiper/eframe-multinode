@@ -1,10 +1,12 @@
 mod error;
 mod file_dialog;
 mod platform;
+mod rdx_runner;
 //mod widgets;
 
 pub(crate) use platform::Platform;
 use platform::Settings;
+use rdx_runner::RdxRunner;
 
 const APP_KEY: &str = concat!("eframe-app-", env!("CARGO_PKG_NAME"));
 
@@ -17,6 +19,9 @@ pub struct MultinodeApp {
     platform: Platform,
 
     file_dialog: file_dialog::FileDialog,
+
+    #[serde(skip)]
+    rdx_runner: RdxRunner,
 
     settings: Settings,
 }
@@ -112,6 +117,12 @@ impl eframe::App for MultinodeApp {
                 }
                 self.platform.show(ctx, ui);
             });
+
+            // Show plugins
+            let RdxRunner { plugins } = &mut self.rdx_runner;
+            for (_name, plugin) in plugins.iter_mut() {
+                plugin.render_rhai(ctx.clone());
+            }
         });
     }
 }

@@ -1,3 +1,6 @@
+[workspace]
+members = ["crates/*"]
+
 [package]
 name = "eframe-multinode"
 version = "0.1.2"
@@ -6,10 +9,15 @@ edition = "2021"
 include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 rust-version = "1.80"
 description = "A PeerPiper multi-node application built using egui and efrem that runs in the browser and desktop."
+default-run = "eframe-multinode"
 
 [package.metadata.docs.rs]
 all-features = true
 targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
+
+[[bin]]
+name = "force-build-wasm-bins"
+path = "build.rs"
 
 [dependencies]
 egui = "0.29"
@@ -28,11 +36,13 @@ seed-keeper-core = { git = "https://github.com/DougAnderson444/seed-keeper.git" 
 egui_material_icons = "0.1.0"
 cloudflare = { version = "0.12.0", git = "https://github.com/cloudflare/cloudflare-rs.git" }
 reqwest = { version = "0.11.27", default-features = false, features = [
-  "native-tls-vendored", # worksaround openssl issue in cross in Docker image
+  "native-tls-vendored", # worksaround openssl issue in cross in Docker image. Could potentially use: openssl-sys = { version = "0.9", features = ['vendored'] }
 ] }
 multiaddr = "0.18"
 thiserror = "2.0"
 bon = "3.1.1" # for easy builder pattern
+wasmparser = "0.221"
+rdx = { path = "../rdx" }
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -65,6 +75,10 @@ serde-wasm-bindgen = "0.6"
 peerpiper-browser = { git = "https://github.com/PeerPiper/peerpiper.git" }
 peerpiper-core = { git = "https://github.com/PeerPiper/peerpiper.git" }
 futures = "0.3"
+
+[build-dependencies]
+wasmparser = "0.221"
+rdx = { path = "../rdx" }
 
 [profile.release]
 opt-level = 2 # fast and small wasm

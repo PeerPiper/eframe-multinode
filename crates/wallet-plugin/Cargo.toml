@@ -1,0 +1,26 @@
+[package]
+name = "wallet-plugin"
+version = "0.1.0"
+edition = "2021"
+
+# forced-target = "wasm32-unknown-unknown"
+
+[dependencies]
+wit-bindgen-rt = { version = "0.36.0", features = ["bitflags"] }
+seed-keeper-core = { git = "https://github.com/DougAnderson444/seed-keeper.git" }
+getrandom = { version = "0.2", features = ["custom"] }
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+codegen-units = 1
+opt-level = "s"
+debug = false
+strip = true
+lto = true
+
+[package.metadata.component]
+package = "component:wallet-plugin"
+
+[package.metadata.component.dependencies]

@@ -7,7 +7,7 @@
 #[tokio::main]
 async fn main() -> eframe::Result {
     let _ = tracing_subscriber::fmt()
-        .with_env_filter("eframe_multinode=debug")
+        .with_env_filter("eframe_multinode=debug,rdx=debug")
         .try_init();
 
     tracing::info!("Starting eframe multinode");
