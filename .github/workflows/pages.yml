@@ -22,6 +22,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4 # repo checkout
 
+      - uses: webfactory/ssh-agent@v0.5.0
+        with:
+          ssh-private-key: ${{ secrets.BESTSIGN_DEPLOY_KEY }}
+
       - name: Set PUBLIC_URL
         run: |
           echo "PUBLIC_URL=https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
