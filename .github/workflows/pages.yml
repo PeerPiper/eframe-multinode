@@ -28,6 +28,16 @@ jobs:
           known_hosts: ${{ secrets.KNOWN_HOSTS }}
           key: ${{ secrets.BESTSIGN_DEPLOY_KEY }}
 
+      - name: Configure Git
+        run: |
+          git config --global url."git@github.com:".insteadOf "https://github.com/"
+
+      - name: Configure Cargo
+        run: |
+          mkdir -p ~/.cargo
+          echo '[net]' >> ~/.cargo/config.toml
+          echo 'git-fetch-with-cli = true' >> ~/.cargo/config.toml
+
       - name: Set PUBLIC_URL
         run: |
           echo "PUBLIC_URL=https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
