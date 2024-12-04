@@ -8,18 +8,15 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use rdx::wasm_component_layer::{ResultType, TupleType, VariantCase, VariantType};
-use rdx::{layer::*, wasm_component_layer::ResultValue};
-use rdx::{
-    layer::{
-        bail, noop_waker,
-        poll::{MakeFuture, PollableFuture},
-        rhai, runtime_layer, Component, Engine, Error, Func, FuncType, Inner, Instance, Linker,
-        List, ListType, Pollable, RecordType, Resource, ResourceTable, ResourceType, Store,
-        SystemTime, Value, ValueType,
-    },
-    wasm_component_layer::Tuple,
+use rdx::layer::{
+    noop_waker,
+    poll::{MakeFuture, PollableFuture},
+    rhai, runtime_layer, Component, Engine, Error, Func, FuncType, Inner, Instance, Linker, List,
+    ListType, Pollable, RecordType, Resource, ResourceTable, ResourceType, Store, SystemTime,
+    Value, ValueType,
 };
+use rdx::wasm_component_layer::{ResultType, VariantCase, VariantType};
+use rdx::{layer::*, wasm_component_layer::ResultValue};
 
 /// Use wasm_component_layer to intanitate a plugin and some state data
 pub struct LayerPlugin<T: Inner + Send + Sync> {
@@ -29,7 +26,11 @@ pub struct LayerPlugin<T: Inner + Send + Sync> {
 
 impl<T: Inner + Send + Sync + 'static> LayerPlugin<T> {
     /// Creates a new with the given wallet layer as a dependency
-    pub fn new(bytes: &[u8], data: T, wallet_layer: Option<Arc<Mutex<LayerPlugin<T>>>>) -> Self {
+    pub fn new(
+        bytes: &[u8],
+        data: T,
+        wallet_layer: Option<Arc<Mutex<Box<dyn Instantiator<T>>>>>,
+    ) -> Self {
         let (instance, store) = instantiate_instance(bytes, data, wallet_layer);
 
         Self {
@@ -104,7 +105,7 @@ impl<T: Inner + Send + Sync + 'static> Instantiator<T> for LayerPlugin<T> {
 pub fn instantiate_instance<T: Inner + Send + Sync + 'static>(
     bytes: &[u8],
     data: T,
-    wallet_layer: Option<Arc<Mutex<LayerPlugin<T>>>>,
+    wallet_layer: Option<Arc<Mutex<Box<dyn Instantiator<T>>>>>,
 ) -> (Instance, Store<T, runtime_layer::Engine>) {
     let table = Arc::new(Mutex::new(ResourceTable::new()));
 
@@ -443,7 +444,7 @@ pub fn instantiate_instance<T: Inner + Send + Sync + 'static>(
         )
         .unwrap();
 
-        let wallet_clone = wallet_layer.clone();
+        let wallet_clone = send_wrapper::SendWrapper::new(wallet_layer.clone());
 
         // return type is:  result<list<u8>, variant<plog: string, wallet-uninitialized, multikey-error: string, config: string>>
         let ok = ValueType::List(ListType::new(ValueType::U8));
@@ -499,6 +500,7 @@ pub fn instantiate_instance<T: Inner + Send + Sync + 'static>(
         )
         .unwrap();
 
+        let wallet_clone = send_wrapper::SendWrapper::new(wallet_layer.clone());
         // prove: func(args: prove-args) -> result<list<u8>, error>;
         host_interface
             .define_func(
@@ -513,7 +515,7 @@ pub fn instantiate_instance<T: Inner + Send + Sync + 'static>(
                         let Value::Record(prove_args_record) = &params[0] else {
                             panic!("Incorrect input type, found {:?}", params[0]);
                         };
-                        let proof = wallet_layer
+                        let proof = wallet_clone
                             .lock()
                             .unwrap()
                             .call("prove", &[Value::Record(prove_args_record.clone())])?;

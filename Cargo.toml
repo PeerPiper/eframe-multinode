@@ -42,8 +42,9 @@ multiaddr = "0.18"
 thiserror = "2.0"
 bon = "3.1.1" # for easy builder pattern
 wasmparser = "0.221"
-rdx = { path = "../rdx" }
+rdx = { git = "https://github.com/DougAnderson444/rdx.git" }
 rand = "0.8"
+send_wrapper = "0.6"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -79,7 +80,7 @@ futures = "0.3"
 
 [build-dependencies]
 wasmparser = "0.221"
-rdx = { path = "../rdx" }
+rdx = { git = "https://github.com/DougAnderson444/rdx.git" }
 
 [profile.release]
 opt-level = 2 # fast and small wasm

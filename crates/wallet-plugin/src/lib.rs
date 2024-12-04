@@ -128,14 +128,13 @@ impl Guest for Component {
                     return Err(MkError::WalletUninitialized);
                 };
 
-                let b = mk::Builder::new_from_seed(codec, wallet.seed())
-                    .map_err(|e| MkError::InvalidCodec(format!("Invalid codec, found: {}", e)))?;
-                b
+                mk::Builder::new_from_seed(codec, wallet.seed())
+                    .map_err(|e| MkError::InvalidCodec(format!("Invalid codec, found: {}", e)))?
             };
 
         let mk = mk_buildr.try_build().unwrap();
 
-        log(&format!("Getting PK for Multikey"));
+        log("Getting PK for Multikey");
 
         let pk = mk
             .conv_view()

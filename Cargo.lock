@@ -829,6 +829,7 @@ dependencies = [
 [[package]]
 name = "bestsign-core"
 version = "0.1.0"
+source = "git+ssh://git@github.com/DougAnderson444/bestsign.git#d85e3474a19c216174c6084e15e62e3061ec301c"
 dependencies = [
  "multibase 1.0.0",
  "multicid",
@@ -1433,8 +1434,8 @@ dependencies = [
 
 [[package]]
 name = "comrade-core"
-version = "0.1.0"
-source = "git+ssh://git@github.com/DougAnderson444/comrade.git#f1443bf25b4f92eab01f88a9dffff0fc9e1c0876"
+version = "0.1.1"
+source = "git+ssh://git@github.com/DougAnderson444/comrade.git#d4f6d35b9dd506724d62e723c50b655f501d8e5c"
 dependencies = [
  "multihash 1.0.4",
  "multikey",
@@ -2348,6 +2349,7 @@ dependencies = [
  "reqwest",
  "rfd",
  "seed-keeper-core",
+ "send_wrapper 0.6.0",
  "serde",
  "serde-wasm-bindgen",
  "thiserror 2.0.4",
@@ -6360,7 +6362,7 @@ dependencies = [
 [[package]]
 name = "provenance-log"
 version = "1.0.23"
-source = "git+ssh://git@github.com/cryptidtech/provenance-log.git?branch=rhai-compat#272cdd18e787b1c5a12952b3987ebbcb89e246fd"
+source = "git+ssh://git@github.com/cryptidtech/provenance-log.git?branch=rhai-compat#b0beb19c9486313f86a0c2fc544257d8f68a5707"
 dependencies = [
  "comrade-core",
  "log",
@@ -6606,6 +6608,7 @@ dependencies = [
 [[package]]
 name = "rdx"
 version = "0.1.1"
+source = "git+https://github.com/DougAnderson444/rdx.git#dd942acd5e78390bf6d3d10a91c7d370dbd48ab8"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -10272,12 +10275,12 @@ dependencies = [
 
 [[package]]
 name = "winx"
-version = "0.36.3"
+version = "0.36.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9643b83820c0cd246ecabe5fa454dd04ba4fa67996369466d0747472d337346"
+checksum = "3f3fd376f71958b862e7afb20cfe5a22830e1963462f3a17f49d82a6c1d1f42d"
 dependencies = [
  "bitflags 2.6.0",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

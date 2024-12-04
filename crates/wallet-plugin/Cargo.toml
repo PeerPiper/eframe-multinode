@@ -10,7 +10,7 @@ wit-bindgen-rt = { version = "0.36.0", features = ["bitflags"] }
 seed-keeper-core = { git = "https://github.com/DougAnderson444/seed-keeper.git" }
 rand = "0.8"
 getrandom = { version = "0.2", features = ["custom"] }
-bestsign-core = { path = "../../../bestsign/crates/core" }
+bestsign-core = { git = "ssh://git@github.com/DougAnderson444/bestsign.git" }
 
 [lib]
 crate-type = ["cdylib"]

@@ -1,9 +1,11 @@
 //! The RdxApp struct is the main struct that holds all the plugins and their state.
+#![allow(clippy::arc_with_non_send_sync)]
+
 mod layer;
 
 use layer::LayerPlugin;
 use rdx::{
-    layer::{Instantiator as _, Value},
+    layer::{Instantiator, Value},
     PluginDeets, State,
 };
 
@@ -56,7 +58,9 @@ impl RdxRunner {
             panic!("RDX Source should be a string");
         };
 
-        let arc_wallet = Arc::new(Mutex::new(wallet_layer));
+        let arc_wallet = Arc::new(Mutex::new(
+            Box::new(wallet_layer) as Box<dyn Instantiator<_>>
+        ));
 
         plugins.insert(
             wallet_name.to_string(),
@@ -83,7 +87,7 @@ impl RdxRunner {
                 name.to_string(),
                 PluginDeets::new(
                     name.to_string(),
-                    Arc::new(Mutex::new(plugin)),
+                    Arc::new(Mutex::new(Box::new(plugin) as Box<dyn Instantiator<_>>)),
                     rdx_source.to_string(),
                 ),
             );

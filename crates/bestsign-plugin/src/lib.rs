@@ -134,8 +134,8 @@ impl CryptoManager for KeyManager {
         limit: usize,
     ) -> Result<bestsign_core::Multikey, bestsign_core::Error> {
         let args = KeyArgs {
-            key: key.to_string().into(),
-            codec: codec.to_string().into(),
+            key: key.to_string(),
+            codec: codec.to_string(),
             threshold: threshold.try_into().unwrap(),
             limit: limit.try_into().unwrap(),
         };
@@ -166,7 +166,7 @@ impl CryptoManager for KeyManager {
         let mk_bytes: Vec<u8> = mk.clone().into();
 
         let sig = prove(&ProveArgs {
-            mk: mk_bytes.into(),
+            mk: mk_bytes,
             data: data.into(),
         })
         .map_err(|e| bestsign_core::Error::Generic(format!("Error: {:?}", e)))?;
