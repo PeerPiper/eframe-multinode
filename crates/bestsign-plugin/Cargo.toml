@@ -1,14 +1,10 @@
 [package]
-name = "wallet-plugin"
+name = "bestsign-plugin"
 version = "0.1.0"
 edition = "2021"
 
-# forced-target = "wasm32-unknown-unknown"
-
 [dependencies]
 wit-bindgen-rt = { version = "0.36.0", features = ["bitflags"] }
-seed-keeper-core = { git = "https://github.com/DougAnderson444/seed-keeper.git" }
-rand = "0.8"
 getrandom = { version = "0.2", features = ["custom"] }
 bestsign-core = { path = "../../../bestsign/crates/core" }
 
@@ -16,6 +12,6 @@ bestsign-core = { path = "../../../bestsign/crates/core" }
 crate-type = ["cdylib"]
 
 [package.metadata.component]
-package = "component:wallet-plugin"
+package = "component:bestsign-plugin"
 
 [package.metadata.component.dependencies]

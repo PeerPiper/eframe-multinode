@@ -1,11 +1,20 @@
 //! The RdxApp struct is the main struct that holds all the plugins and their state.
-use rdx::{LayerPlugin, PluginDeets, State, Value};
+mod layer;
 
-use std::collections::HashMap;
+use layer::LayerPlugin;
+use rdx::{
+    layer::{Instantiator as _, Value},
+    PluginDeets, State,
+};
+
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 /// The RdxRunner struct is the main struct that holds all the plugins and their state.
 pub struct RdxRunner {
-    pub(crate) plugins: HashMap<String, PluginDeets>,
+    pub(crate) plugins: HashMap<String, PluginDeets<State>>,
 }
 
 impl Default for RdxRunner {
@@ -17,15 +26,66 @@ impl Default for RdxRunner {
 impl RdxRunner {
     pub fn new(ctx: Option<egui::Context>) -> Self {
         let mut plugins = HashMap::new();
-        for (name, wasm_bytes) in crate::BUILTIN_PLUGINS.iter() {
-            let mut plugin = LayerPlugin::new(wasm_bytes, State::new(ctx.clone()));
+
+        // the wallet_plugin needs to be separate from the other plugins
+        // because it's exports (get-mk, prove) become the imports for
+        // the other plugins.
+        // Getthe single `wallet_plugin` from `BUILTIN_PLUGINS`,
+        // and put the remaining in `rest` array.
+        let mut builtins = crate::BUILTIN_PLUGINS.to_vec();
+
+        // show builtins names (first in tuple) only
+        tracing::info!(
+            "Builtin plugins: {:?}",
+            builtins.iter().map(|(name, _)| name).collect::<Vec<_>>()
+        );
+
+        let (wallet_name, wallet_bytes) = builtins
+            // find position and remove it into wallet_plugin var
+            .iter()
+            // starts with `wallet_plugin`
+            .position(|(name, _)| *name == "wallet_plugin.wasm")
+            .map(|i| builtins.remove(i))
+            .unwrap();
+
+        // Instantiate the wallet_plugin
+        let mut wallet_layer = LayerPlugin::new(wallet_bytes, State::new(ctx.clone()), None);
+        tracing::info!("Wallet plugin instantiated");
+        let rdx_source = wallet_layer.call("load", &[]).unwrap();
+        let Some(Value::String(rdx_source)) = rdx_source else {
+            panic!("RDX Source should be a string");
+        };
+
+        let arc_wallet = Arc::new(Mutex::new(wallet_layer));
+
+        plugins.insert(
+            wallet_name.to_string(),
+            PluginDeets::new(
+                wallet_name.to_string(),
+                arc_wallet.clone(),
+                rdx_source.to_string(),
+            ),
+        );
+
+        // the rest of the plugins
+        for (name, wasm_bytes) in builtins {
+            let mut plugin = LayerPlugin::new(
+                wasm_bytes,
+                State::new(ctx.clone()),
+                Some(arc_wallet.clone()),
+            );
+            tracing::info!("Plugin {} instantiated", name);
             let rdx_source = plugin.call("load", &[]).unwrap();
             let Some(Value::String(rdx_source)) = rdx_source else {
                 panic!("RDX Source should be a string");
             };
             plugins.insert(
                 name.to_string(),
-                PluginDeets::new(name.to_string(), plugin, rdx_source.to_string()),
+                PluginDeets::new(
+                    name.to_string(),
+                    Arc::new(Mutex::new(plugin)),
+                    rdx_source.to_string(),
+                ),
             );
         }
 

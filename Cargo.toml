@@ -15,9 +15,9 @@ default-run = "eframe-multinode"
 all-features = true
 targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
 
-[[bin]]
-name = "force-build-wasm-bins"
-path = "build.rs"
+# [[bin]]
+# name = "force-build-wasm-bins"
+# path = "build.rs"
 
 [dependencies]
 egui = "0.29"
@@ -43,6 +43,7 @@ thiserror = "2.0"
 bon = "3.1.1" # for easy builder pattern
 wasmparser = "0.221"
 rdx = { path = "../rdx" }
+rand = "0.8"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

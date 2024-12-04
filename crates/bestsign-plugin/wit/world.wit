@@ -8,6 +8,7 @@ interface types {
     value: string
   }
 
+  /// Key arguments for getting a Multikey
   record key-args {
     /// The key
     key: string,
@@ -18,10 +19,17 @@ interface types {
     /// Limit 
     limit: u8
   }
+
+  record prove-args {
+    /// The Multikey
+    mk: list<u8>,
+    /// The data
+    data: list<u8>,
+  }
 }
 
 interface host {
-  use types.{event, key-args};
+  use types.{event, key-args, prove-args};
 
   /// emit an event.
   emit: func(evt: event);
@@ -31,12 +39,8 @@ interface host {
 
   /// get a random byte
   random-byte: func() -> u8;
-}
 
-interface run {
-
-  use types.{event, key-args};
-
+  /// get-mk Error type 
   variant mk-error {
     /// The error message
     invalid-codec(string),
@@ -48,24 +52,23 @@ interface run {
     key-not-found(string),
   }
 
-  record prove-args {
-    /// The Multikey
-    mk: list<u8>,
-    /// The data
-    data: list<u8>,
-  }
-
-  /// loads just the XML like markdown
-  load: func() -> string;
-
-  /// login 
-  login: func(username: string, password: string);
-
   /// Gets the Multikey 
   get-mk: func(args: key-args) -> result<list<u8>, mk-error>;
 
   /// Proves the data for the given Multikey.
   prove: func(args: prove-args) -> result<list<u8>, mk-error>;
+}
+
+interface run {
+
+  use types.{event};
+
+  /// loads just the XML like markdown
+  load: func() -> string;
+
+  /// Creates a data provenance log, returns the serialized log.
+  create: func(lock: string, unlock: string) -> bool;
+
 }
 
 /// An example world for the component to target.
