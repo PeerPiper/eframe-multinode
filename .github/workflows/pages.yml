@@ -22,9 +22,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4 # repo checkout
 
-      - uses: webfactory/ssh-agent@v0.5.0
+      - name: Install SSH Key
+        uses: shimataro/ssh-key-action@v2
         with:
-          ssh-private-key: ${{ secrets.BESTSIGN_DEPLOY_KEY }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+          key: ${{ secrets.BESTSIGN_DEPLOY_KEY }}
 
       - name: Set PUBLIC_URL
         run: |
