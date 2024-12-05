@@ -143,7 +143,7 @@ jobs:
 
     - name: Configure Git
       run: |
-        git config --global url."git@github.com:".insteadOf "https://github.com/"
+        git config --global url."https://${{ secrets.PRIVATE_REPO_TOKEN }}:x-oauth-basic@github.com/".insteadOf "ssh://git@github.com"
 
     - name: Configure Cargo
       run: |
@@ -158,7 +158,7 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
         # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
-        targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || contains(matrix.TARGET, 'linux') && 'aarch64-unknown-linux-gnu,x86_64-unknown-linux-gnu' || 'x86_64-pc-windows-msvc' }}
+        targets: wasm32-unknown-unknown, ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || contains(matrix.TARGET, 'linux') && 'aarch64-unknown-linux-gnu,x86_64-unknown-linux-gnu' || 'x86_64-pc-windows-msvc' }}
 
     - name: Set default cargo build target
       if: contains(matrix.TARGET, 'x86_64-apple-darwin')
@@ -166,6 +166,23 @@ jobs:
         echo "CARGO_BUILD_TARGET=${{ matrix.TARGET }}" >> $GITHUB_ENV
         rustup target add ${{ matrix.TARGET }}
         rustup default stable-${{ matrix.TARGET }}
+     
+    # Use Just commands
+    - uses: extractions/setup-just@v2
+
+    # binstall is faster than cargo install
+    - name: Install binstall
+      uses: taiki-e/install-action@cargo-binstall
+      
+    # We'l need cargo-component to build WIT Components in the Just commands
+    - name: Install cargo-component
+      run: echo yes | cargo binstall cargo-component
+
+    - name: Rust Cache # cache the rust build artefacts
+      uses: Swatinem/rust-cache@v2
+
+    - name: Pre-Build using Just
+      run: just build-wits
 
     # For linux, it's necessary to use cross from the git repository to avoid glibc problems
     # Ref: https://github.com/cross-rs/cross/issues/1510

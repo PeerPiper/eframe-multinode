@@ -38,19 +38,31 @@ jobs:
           echo '[net]' >> ~/.cargo/config.toml
           echo 'git-fetch-with-cli = true' >> ~/.cargo/config.toml
 
+      - name: Install Rust  
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
       - name: Set PUBLIC_URL
         run: |
           echo "PUBLIC_URL=https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
-      
-      - name: Setup toolchain for wasm
-        run: |
-          rustup update stable
-          rustup default stable
-          rustup set profile minimal
-          rustup target add wasm32-unknown-unknown
+            
+      # Use Just commands
+      - uses: extractions/setup-just@v2
+
+      # binstall is faster than cargo install
+      - name: Install binstall
+        uses: taiki-e/install-action@cargo-binstall
+        
+      # We'l need cargo-component to build WIT Components in the Just commands
+      - name: Install cargo-component
+        run: echo yes | cargo binstall cargo-component
 
       - name: Rust Cache # cache the rust build artefacts
         uses: Swatinem/rust-cache@v2
+
+      - name: Pre-Build using Just
+        run: just build-wits
 
       - name: Download and install Trunk binary
         run: wget -qO- https://github.com/thedodd/trunk/releases/latest/download/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
