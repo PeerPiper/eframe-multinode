@@ -829,7 +829,7 @@ dependencies = [
 [[package]]
 name = "bestsign-core"
 version = "0.1.0"
-source = "git+ssh://git@github.com/DougAnderson444/bestsign.git#3f0aee691f3351bffa64e16da5088025ceee4af5"
+source = "git+ssh://git@github.com/DougAnderson444/bestsign.git#5d5a98f9e80d978b9570cb2374249adb5fa37478"
 dependencies = [
  "multibase 1.0.0",
  "multicid",
