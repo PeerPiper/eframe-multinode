@@ -13,7 +13,7 @@ release-tag:
 build-wits:
  for dir in crates/*; do \
     if ([ -d $dir/wit ] && [ -f $dir/src/bindings.rs ]); then \
-     cargo component build --manifest-path=$dir/Cargo.toml --target wasm32-unknown-unknown ; \
+     # cargo component build --manifest-path=$dir/Cargo.toml --target wasm32-unknown-unknown ; \
      cargo component build --manifest-path=$dir/Cargo.toml --target wasm32-unknown-unknown --release; \
    fi \
  done
