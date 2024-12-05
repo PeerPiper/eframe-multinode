@@ -829,7 +829,7 @@ dependencies = [
 [[package]]
 name = "bestsign-core"
 version = "0.1.0"
-source = "git+ssh://git@github.com/DougAnderson444/bestsign.git#d85e3474a19c216174c6084e15e62e3061ec301c"
+source = "git+ssh://git@github.com/DougAnderson444/bestsign.git#3f0aee691f3351bffa64e16da5088025ceee4af5"
 dependencies = [
  "multibase 1.0.0",
  "multicid",
@@ -6362,7 +6362,7 @@ dependencies = [
 [[package]]
 name = "provenance-log"
 version = "1.0.23"
-source = "git+ssh://git@github.com/cryptidtech/provenance-log.git?branch=rhai-compat#b0beb19c9486313f86a0c2fc544257d8f68a5707"
+source = "git+ssh://git@github.com/DougAnderson444/provenance-log.git?branch=rhai-compat#b0beb19c9486313f86a0c2fc544257d8f68a5707"
 dependencies = [
  "comrade-core",
  "log",
@@ -8170,9 +8170,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.7.12"
+version = "0.7.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61e7c3654c13bcd040d4a03abee2c75b1d14a37b423cf5a813ceae1cc903ec6a"
+checksum = "d7fcaa8d55a2bdd6b83ace262b016eca0d79ee02818c5c1bcdf0305114081078"
 dependencies = [
  "bytes",
  "futures-core",
