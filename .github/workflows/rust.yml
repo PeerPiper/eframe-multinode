@@ -8,9 +8,41 @@ env:
   RUSTDOCFLAGS: -D warnings -A static_mut_refs
 
 jobs:
+  # this job pre-build using `just build` and uploads the .wasm files before running other jobs 
+  # all other jobs depend on this one
+  pre-build:
+    name: Pre-Build wasm binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: extractions/setup-just@v2
+
+      # binstall is faster than cargo install
+      - name: Install binstall
+        uses: taiki-e/install-action@cargo-binstall
+        
+      - name: Install cargo-component
+        run: echo yes | cargo binstall cargo-component
+
+      - name: install Rust  
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - run: just build
+
+      - name: upload artifacts to target
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-files-target 
+          path: target/wasm32-unknown-unknown/**/*.wasm
+          overwrite: true  
+
   # check:
   #   name: Check
   #   runs-on: ubuntu-latest
+  #   needs: pre-build
   #   steps:
   #     - uses: actions/checkout@v4
   #     - uses: actions-rs/toolchain@v1
@@ -26,6 +58,7 @@ jobs:
   # check_wasm:
   #   name: Check wasm32
   #   runs-on: ubuntu-latest
+  #   needs: pre-build
   #   steps:
   #     - uses: actions/checkout@v4
   #     - uses: actions-rs/toolchain@v1
@@ -42,6 +75,7 @@ jobs:
   # test:
   #   name: Test Suite
   #   runs-on: ubuntu-latest
+  #   needs: pre-build
   #   steps:
   #     - uses: actions/checkout@v4
   #     - uses: actions-rs/toolchain@v1
@@ -58,6 +92,7 @@ jobs:
   # fmt:
   #   name: Rustfmt
   #   runs-on: ubuntu-latest
+  #   needs: pre-build
   #   steps:
   #     - uses: actions/checkout@v4
   #     - uses: actions-rs/toolchain@v1
@@ -74,6 +109,7 @@ jobs:
   # clippy:
   #   name: Clippy
   #   runs-on: ubuntu-latest
+  #   needs: pre-build
   #   steps:
   #     - uses: actions/checkout@v4
   #     - uses: actions-rs/toolchain@v1
@@ -90,6 +126,7 @@ jobs:
   # trunk:
   #   name: trunk
   #   runs-on: ubuntu-latest
+  #   needs: pre-build
   #   steps:
   #     - uses: actions/checkout@v4
   #     - uses: actions-rs/toolchain@v1
@@ -105,6 +142,7 @@ jobs:
 
   build:
     runs-on: ${{ matrix.os }}
+    needs: pre-build
     strategy:
       fail-fast: false
       matrix:
@@ -134,6 +172,16 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+
+    - name: Create directories
+      run: |
+        mkdir -p target/wasm32-unknown-unknown/release
+        mkdir -p assets
+
+    - uses: actions/download-artifact@v4
+      with:
+        name: wasm-files-target
+        path: target/wasm32-unknown-unknown
 
     - name: Install SSH Key
       uses: shimataro/ssh-key-action@v2
