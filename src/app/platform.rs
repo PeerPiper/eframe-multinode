@@ -1,30 +1,30 @@
-//! Platform Module
-
-use std::future::Future;
+//! Platform can be either Web or Native.
+//!
+//! This module provides a unified interface for both platforms.
 
 /// Native Platform Module
 #[cfg(not(target_arch = "wasm32"))]
-mod native;
+pub mod native;
 
 #[cfg(not(target_arch = "wasm32"))]
-use native as platform;
+pub use native as platform;
 
 /// Web Platform Module
 #[cfg(target_arch = "wasm32")]
-mod web;
+pub mod web;
 
 /// Web Platform Module
 #[cfg(target_arch = "wasm32")]
-use web as platform;
+pub use web as platform;
 
-pub(crate) use platform::{Platform, Settings};
+pub(crate) use platform::{spawn, Platform, Settings};
 
-#[cfg(not(target_arch = "wasm32"))]
-pub fn spawn(f: impl Future<Output = ()> + Send + 'static) {
-    tokio::spawn(f);
-}
+//pub trait System {
+///// Put bytes into the local system
+//fn put(&self, bytes: Vec<u8>) -> Cid;
+//}
 
-#[cfg(target_arch = "wasm32")]
-pub fn spawn(f: impl Future<Output = ()> + 'static) {
-    wasm_bindgen_futures::spawn_local(f);
-}
+pub mod peerpiper;
+
+pub use platform::peerpiper::create_peerpiper;
+pub use platform::StringStore;

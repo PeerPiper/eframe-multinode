@@ -3,16 +3,27 @@
 //! For example, a native node will only be available here. Whereas the browser needs to connect
 //! to a remote node, which is handled in the `web` module.
 mod cloudflare;
+mod error;
+pub mod peerpiper;
 mod settings;
+mod storage;
+pub use storage::StringStore;
+
+pub use error::Error;
 
 use multiaddr::Multiaddr;
+pub use peerpiper_native::NativeBlockstore as Blockstore;
 pub(crate) use settings::Settings;
 
-use peerpiper_plugins::tokio::{ExternalEvents, PluggablePiper, PluginLoader};
+use peerpiper_plugins::tokio::{ExternalEvents, PluggableClient, PluggablePiper};
+use std::future::Future;
 use std::sync::{Arc, Mutex};
 
 // use peerpiper_plugins::{PluggablePiper};
 
+pub fn spawn(f: impl Future<Output = ()> + Send + 'static) {
+    tokio::spawn(f);
+}
 /// Track whether the Context has been set
 #[derive(Debug, Default)]
 pub(crate) struct ContextSet {
@@ -47,7 +58,7 @@ pub(crate) struct Platform {
     /// Clone of the [egui::Context] so that the platform can trigger repaints
     ctx: Arc<Mutex<ContextSet>>,
 
-    loader: PluginLoader,
+    pluggable_client: PluggableClient,
 
     addr: Arc<Mutex<Option<Multiaddr>>>,
 }
@@ -58,7 +69,8 @@ impl Default for Platform {
         let ctx: Arc<Mutex<ContextSet>> = Arc::new(Mutex::new(ContextSet::new()));
         let addr = Arc::new(Mutex::new(None));
 
-        let (mut pluggable, command_receiver, loader, mut plugin_evts) = PluggablePiper::new();
+        let (mut pluggable, command_receiver, pluggable_client, mut plugin_evts) =
+            PluggablePiper::new();
 
         let log_clone = log.clone();
         let ctx_clone = ctx.clone();
@@ -90,7 +102,7 @@ impl Default for Platform {
         Self {
             log,
             ctx,
-            loader,
+            pluggable_client,
             addr,
         }
     }
@@ -107,7 +119,7 @@ impl Platform {
     /// Load a plugin into the Platform
     pub fn load_plugin(&self, name: String, wasm: Vec<u8>) {
         // call self.loader.load_plugin(name, wasm).await from this sync function using tokio
-        let mut loader = self.loader.clone();
+        let mut loader = self.pluggable_client.clone();
         tokio::task::spawn(async move {
             if let Err(e) = loader.load_plugin(name, &wasm).await {
                 tracing::error!("Failed to load plugin: {:?}", e);

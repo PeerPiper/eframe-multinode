@@ -45,6 +45,15 @@ wasmparser = "0.221"
 rdx = { git = "https://github.com/DougAnderson444/rdx.git" }
 rand = "0.8"
 send_wrapper = "0.6"
+dirs = "5.0.1"
+anyhow = "1.0"
+futures = "0.3"
+peerpiper = { git = "https://github.com/PeerPiper/peerpiper.git" }
+cbor4ii = "0.3.3"
+
+[dev-dependencies]
+ron = "0.8"
+cbor4ii = "0.3.3"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -58,6 +67,7 @@ tokio = { version = "1", features = [
   "rt-multi-thread",
 ] }
 peerpiper-plugins = { git = "https://github.com/PeerPiper/peerpiper.git" }
+peerpiper-native = { git = "https://github.com/PeerPiper/peerpiper.git" }
 rfd = "0.15" # Rust File Dialog 
 
 # web:
@@ -75,8 +85,6 @@ getrandom = { version = "0.2", features = ["js"] }
 egui_suspense = "0.6.0"
 serde-wasm-bindgen = "0.6"
 peerpiper-browser = { git = "https://github.com/PeerPiper/peerpiper.git" }
-peerpiper-core = { git = "https://github.com/PeerPiper/peerpiper.git" }
-futures = "0.3"
 
 [build-dependencies]
 wasmparser = "0.221"
@@ -92,6 +100,8 @@ opt-level = 2
 
 [patch.crates-io]
 
+[patch.'https://github.com/DougAnderson444/rdx.git']
+rdx = { path = "../rdx" }
 # If you want to use the bleeding edge version of egui and eframe:
 # egui = { git = "https://github.com/emilk/egui", branch = "master" }
 # eframe = { git = "https://github.com/emilk/egui", branch = "master" }

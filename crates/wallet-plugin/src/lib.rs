@@ -38,21 +38,37 @@ struct Component;
 
 impl Guest for Component {
     fn load() -> String {
+        // There are 3 options:
+        // 1) No encrypted_seed, and is not unlocked. Create a seed and unlock.
+        // 2) encrypted_seed, and is not unlocked. Unlock the seed.
+        // 3) encrypted_seed, and is unlocked. Show the encrypted seed.
         r#"
-        if !is_def_var("encrypted_seed") {
+        let encrypted_seed = is_def_var("encrypted_seed");
+        let unlocked = unlocked();
+
+        if !encrypted_seed && !unlocked {
             render(`
                 <Vertical>
-                    // TextEdit automatically adds the template literal value to Rhai scope
-                    // when text is changed, so it can be accessed in the login function
+                    <Label>Create a new wallet</Label>
                     <TextEdit>{{username}}</TextEdit>
                     <TextEdit>{{password}}</TextEdit>
-                    <Button on_click=login(username, password)>Login</Button>
+                    <Button on_click=create(username, password)>Login</Button>
                 </Vertical>
             `)
-
+        } else if encrypted_seed && !unlocked {
+            render(`
+                <Vertical>
+                    <Label>Unlock your wallet</Label>
+                    <TextEdit>{{encrypted_seed}}</TextEdit>
+                    <TextEdit>{{username}}</TextEdit>
+                    <TextEdit>{{password}}</TextEdit>
+                    <Button on_click=unlock(username, password, encrypted_seed)>Unlock</Button>
+                </Vertical>
+            `)
         } else {
             render(`
                 <Vertical>
+                    <Label>Encrypted Seed:</Label>
                     <Label>{{encrypted_seed}}</Label>
                 </Vertical>
             `)
@@ -61,49 +77,63 @@ impl Guest for Component {
         .to_string()
     }
 
-    fn login(username: String, password: String) {
-        log("Login button clicked");
+    /// Returns true if the wallet is unlocked (is some)
+    fn unlocked() -> bool {
+        let w = WALLET.lock().unwrap();
+        w.is_some()
+    }
+
+    fn unlock(username: String, password: String, encrypted_seed: String) {
+        log("Unlock button clicked");
 
         // return early if Err Result
-        let Ok(username) = MinString::<8>::new(&username) else {
+        let Ok(username_min) = MinString::<8>::new(&username) else {
             log(&format!("Failed to create MinString from {}", username));
             return;
         };
 
-        let Ok(password) = MinString::<8>::new(&password) else {
+        let Ok(password_min) = MinString::<8>::new(&password) else {
+            log(&format!("Failed to create MinString from {}", password));
+            return;
+        };
+
+        let encrypted_seed = encrypted_seed
+            .trim_start_matches("[")
+            .trim_end_matches("]")
+            .split(",")
+            .map(|s| s.parse::<u8>().unwrap())
+            .collect::<Vec<u8>>();
+
+        let credentials = Credentials {
+            username: username_min,
+            password: password_min,
+            encrypted_seed: Some(encrypted_seed),
+        };
+
+        process_creds(credentials);
+    }
+
+    fn create(username: String, password: String) {
+        log("Login button clicked");
+
+        // return early if Err Result
+        let Ok(username_min) = MinString::<8>::new(&username) else {
+            log(&format!("Failed to create MinString from {}", username));
+            return;
+        };
+
+        let Ok(password_min) = MinString::<8>::new(&password) else {
             log(&format!("Failed to create MinString from {}", password));
             return;
         };
 
         let credentials = Credentials {
-            username,
-            password,
+            username: username_min,
+            password: password_min,
             encrypted_seed: None,
         };
 
-        let Ok(wallet) = Wallet::new(credentials) else {
-            log("Failed to create Wallet from credentials");
-            return;
-        };
-
-        // safe to unwrap because we know the seed is corect AES length
-        let encrypted_seed = wallet.encrypted_seed().unwrap();
-
-        // set the static
-        WALLET.lock().unwrap().replace(wallet);
-
-        let evt = Event {
-            name: "encrypted_seed".to_string(),
-            value: format!(
-                "[{}]",
-                encrypted_seed
-                    .iter()
-                    .map(|b| b.to_string())
-                    .collect::<Vec<String>>()
-                    .join(","),
-            ),
-        };
-        emit(&evt);
+        process_creds(credentials);
     }
 
     /// Gets the Multikey
@@ -202,6 +232,51 @@ impl Guest for Component {
 }
 
 bindings::export!(Component with_types_in bindings);
+
+// Process the credentials, create and set the WALLET, emit the values
+fn process_creds(credentials: Credentials) {
+    let username = credentials.username.to_string();
+    let password = credentials.password.to_string();
+
+    let Ok(wallet) = Wallet::new(credentials) else {
+        log("Failed to create Wallet from credentials");
+        return;
+    };
+
+    let encrypted_seed = wallet.encrypted_seed().unwrap();
+
+    // set the static
+    WALLET.lock().unwrap().replace(wallet);
+
+    // unlock evt
+    emit(&Event {
+        name: "unlocked".to_string(),
+        value: "true".to_string(),
+    });
+
+    // emit username and password so they can be persisted for easy login
+    emit(&Event {
+        name: "username".to_string(),
+        value: username,
+    });
+
+    emit(&Event {
+        name: "password".to_string(),
+        value: password,
+    });
+
+    emit(&Event {
+        name: "encrypted_seed".to_string(),
+        value: format!(
+            "[{}]",
+            encrypted_seed
+                .iter()
+                .map(|b| b.to_string())
+                .collect::<Vec<String>>()
+                .join(","),
+        ),
+    });
+}
 
 /// Helper fn which does `|e| Error::MultikeyError(&e.to_string())`
 fn multikey_error(e: impl std::fmt::Display) -> MkError {

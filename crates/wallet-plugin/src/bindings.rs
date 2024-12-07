@@ -220,7 +220,7 @@ pub mod exports {
                 }
                 #[doc(hidden)]
                 #[allow(non_snake_case)]
-                pub unsafe fn _export_login_cabi<T: Guest>(
+                pub unsafe fn _export_create_cabi<T: Guest>(
                     arg0: *mut u8,
                     arg1: usize,
                     arg2: *mut u8,
@@ -231,7 +231,30 @@ pub mod exports {
                     let bytes0 = _rt::Vec::from_raw_parts(arg0.cast(), len0, len0);
                     let len1 = arg3;
                     let bytes1 = _rt::Vec::from_raw_parts(arg2.cast(), len1, len1);
-                    T::login(_rt::string_lift(bytes0), _rt::string_lift(bytes1));
+                    T::create(_rt::string_lift(bytes0), _rt::string_lift(bytes1));
+                }
+                #[doc(hidden)]
+                #[allow(non_snake_case)]
+                pub unsafe fn _export_unlock_cabi<T: Guest>(
+                    arg0: *mut u8,
+                    arg1: usize,
+                    arg2: *mut u8,
+                    arg3: usize,
+                    arg4: *mut u8,
+                    arg5: usize,
+                ) {
+                    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
+                    let len0 = arg1;
+                    let bytes0 = _rt::Vec::from_raw_parts(arg0.cast(), len0, len0);
+                    let len1 = arg3;
+                    let bytes1 = _rt::Vec::from_raw_parts(arg2.cast(), len1, len1);
+                    let len2 = arg5;
+                    let bytes2 = _rt::Vec::from_raw_parts(arg4.cast(), len2, len2);
+                    T::unlock(
+                        _rt::string_lift(bytes0),
+                        _rt::string_lift(bytes1),
+                        _rt::string_lift(bytes2),
+                    );
                 }
                 #[doc(hidden)]
                 #[allow(non_snake_case)]
@@ -437,15 +460,33 @@ pub mod exports {
                         }
                     }
                 }
+                #[doc(hidden)]
+                #[allow(non_snake_case)]
+                pub unsafe fn _export_unlocked_cabi<T: Guest>() -> i32 {
+                    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
+                    let result0 = T::unlocked();
+                    match result0 {
+                        true => 1,
+                        false => 0,
+                    }
+                }
                 pub trait Guest {
                     /// loads just the XML like markdown
                     fn load() -> _rt::String;
-                    /// login
-                    fn login(username: _rt::String, password: _rt::String);
+                    /// create a seed and lock it
+                    fn create(username: _rt::String, password: _rt::String);
+                    /// Unlock an existing encrypted seed
+                    fn unlock(
+                        username: _rt::String,
+                        password: _rt::String,
+                        encrypted_seed: _rt::String,
+                    );
                     /// Gets the Multikey
                     fn get_mk(args: KeyArgs) -> Result<_rt::Vec<u8>, MkError>;
                     /// Proves the data for the given Multikey.
                     fn prove(args: ProveArgs) -> Result<_rt::Vec<u8>, MkError>;
+                    /// Returns whether the wallet is unlocked or not
+                    fn unlocked() -> bool;
                 }
                 #[doc(hidden)]
                 macro_rules! __export_component_plugin_run_cabi {
@@ -456,10 +497,15 @@ pub mod exports {
                         = "cabi_post_component:plugin/run#load"] unsafe extern "C" fn
                         _post_return_load(arg0 : * mut u8,) { $($path_to_types)*::
                         __post_return_load::<$ty > (arg0) } #[export_name =
-                        "component:plugin/run#login"] unsafe extern "C" fn
-                        export_login(arg0 : * mut u8, arg1 : usize, arg2 : * mut u8, arg3
-                        : usize,) { $($path_to_types)*:: _export_login_cabi::<$ty >
+                        "component:plugin/run#create"] unsafe extern "C" fn
+                        export_create(arg0 : * mut u8, arg1 : usize, arg2 : * mut u8,
+                        arg3 : usize,) { $($path_to_types)*:: _export_create_cabi::<$ty >
                         (arg0, arg1, arg2, arg3) } #[export_name =
+                        "component:plugin/run#unlock"] unsafe extern "C" fn
+                        export_unlock(arg0 : * mut u8, arg1 : usize, arg2 : * mut u8,
+                        arg3 : usize, arg4 : * mut u8, arg5 : usize,) {
+                        $($path_to_types)*:: _export_unlock_cabi::<$ty > (arg0, arg1,
+                        arg2, arg3, arg4, arg5) } #[export_name =
                         "component:plugin/run#get-mk"] unsafe extern "C" fn
                         export_get_mk(arg0 : * mut u8, arg1 : usize, arg2 : * mut u8,
                         arg3 : usize, arg4 : i32, arg5 : i32,) -> * mut u8 {
@@ -474,7 +520,10 @@ pub mod exports {
                         _export_prove_cabi::<$ty > (arg0, arg1, arg2, arg3) }
                         #[export_name = "cabi_post_component:plugin/run#prove"] unsafe
                         extern "C" fn _post_return_prove(arg0 : * mut u8,) {
-                        $($path_to_types)*:: __post_return_prove::<$ty > (arg0) } };
+                        $($path_to_types)*:: __post_return_prove::<$ty > (arg0) }
+                        #[export_name = "component:plugin/run#unlocked"] unsafe extern
+                        "C" fn export_unlocked() -> i32 { $($path_to_types)*::
+                        _export_unlocked_cabi::<$ty > () } };
                     };
                 }
                 #[doc(hidden)]
@@ -545,24 +594,26 @@ pub(crate) use __export_plugin_world_impl as export;
 #[cfg(target_arch = "wasm32")]
 #[link_section = "component-type:wit-bindgen:0.35.0:component:plugin:plugin-world:encoded world"]
 #[doc(hidden)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 716] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xc9\x04\x01A\x02\x01\
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 787] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\x90\x05\x01A\x02\x01\
 A\x09\x01B\x04\x01r\x02\x04names\x05values\x04\0\x05event\x03\0\0\x01r\x04\x03ke\
 ys\x05codecs\x09threshold}\x05limit}\x04\0\x08key-args\x03\0\x02\x03\0\x16compon\
 ent:plugin/types\x05\0\x02\x03\0\0\x05event\x03\0\x05event\x03\0\x01\x02\x03\0\0\
 \x08key-args\x01B\x0a\x02\x03\x02\x01\x01\x04\0\x05event\x03\0\0\x02\x03\x02\x01\
 \x03\x04\0\x08key-args\x03\0\x02\x01@\x01\x03evt\x01\x01\0\x04\0\x04emit\x01\x04\
 \x01@\x01\x03msgs\x01\0\x04\0\x03log\x01\x05\x01@\0\0}\x04\0\x0brandom-byte\x01\x06\
-\x03\0\x15component:plugin/host\x05\x04\x01B\x12\x02\x03\x02\x01\x01\x04\0\x05ev\
+\x03\0\x15component:plugin/host\x05\x04\x01B\x16\x02\x03\x02\x01\x01\x04\0\x05ev\
 ent\x03\0\0\x02\x03\x02\x01\x03\x04\0\x08key-args\x03\0\x02\x01q\x04\x0dinvalid-\
 codec\x01s\0\x14wallet-uninitialized\0\0\x0emultikey-error\x01s\0\x0dkey-not-fou\
 nd\x01s\0\x04\0\x08mk-error\x03\0\x04\x01p}\x01r\x02\x02mk\x06\x04data\x06\x04\0\
 \x0aprove-args\x03\0\x07\x01@\0\0s\x04\0\x04load\x01\x09\x01@\x02\x08usernames\x08\
-passwords\x01\0\x04\0\x05login\x01\x0a\x01j\x01\x06\x01\x05\x01@\x01\x04args\x03\
-\0\x0b\x04\0\x06get-mk\x01\x0c\x01@\x01\x04args\x08\0\x0b\x04\0\x05prove\x01\x0d\
-\x04\0\x14component:plugin/run\x05\x05\x04\0\x1dcomponent:plugin/plugin-world\x04\
-\0\x0b\x12\x01\0\x0cplugin-world\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\
-\x0dwit-component\x070.220.0\x10wit-bindgen-rust\x060.35.0";
+passwords\x01\0\x04\0\x06create\x01\x0a\x01@\x03\x08usernames\x08passwords\x0een\
+crypted-seeds\x01\0\x04\0\x06unlock\x01\x0b\x01j\x01\x06\x01\x05\x01@\x01\x04arg\
+s\x03\0\x0c\x04\0\x06get-mk\x01\x0d\x01@\x01\x04args\x08\0\x0c\x04\0\x05prove\x01\
+\x0e\x01@\0\0\x7f\x04\0\x08unlocked\x01\x0f\x04\0\x14component:plugin/run\x05\x05\
+\x04\0\x1dcomponent:plugin/plugin-world\x04\0\x0b\x12\x01\0\x0cplugin-world\x03\0\
+\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.220.0\x10wit-bi\
+ndgen-rust\x060.35.0";
 #[inline(never)]
 #[doc(hidden)]
 pub fn __link_custom_section_describing_imports() {

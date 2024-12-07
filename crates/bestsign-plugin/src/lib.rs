@@ -39,15 +39,13 @@ struct Component;
 
 impl Guest for Component {
     fn load() -> String {
-        let lock_str = r#"
-            check_signature("/recoverykey", "/entry/") ||
-            check_signature("/pubkey", "/entry/") ||
-            check_preimage("/hash")
+        let lock_str = r#"check_signature("/recoverykey", "/entry/") ||
+check_signature("/pubkey", "/entry/") ||
+check_preimage("/hash")
         "#;
 
-        let unlock_str = r#"
-                push("/entry/");
-                push("/entry/proof");
+        let unlock_str = r#"push("/entry/");
+push("/entry/proof");
             "#;
 
         emit(&Event {

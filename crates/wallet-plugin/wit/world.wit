@@ -58,14 +58,20 @@ interface run {
   /// loads just the XML like markdown
   load: func() -> string;
 
-  /// login 
-  login: func(username: string, password: string);
+  /// create a seed and lock it 
+  create: func(username: string, password: string);
+
+  /// Unlock an existing encrypted seed 
+  unlock: func(username: string, password: string, encrypted-seed: string);
 
   /// Gets the Multikey 
   get-mk: func(args: key-args) -> result<list<u8>, mk-error>;
 
   /// Proves the data for the given Multikey.
   prove: func(args: prove-args) -> result<list<u8>, mk-error>;
+
+  /// Returns whether the wallet is unlocked or not 
+  unlocked: func() -> bool;
 }
 
 /// An example world for the component to target.

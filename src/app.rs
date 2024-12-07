@@ -12,7 +12,7 @@ const APP_KEY: &str = concat!("eframe-app-", env!("CARGO_PKG_NAME"));
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(Default, serde::Deserialize, serde::Serialize)]
-#[serde(default)] // if we add new fields, give them default values when deserializing old state
+//#[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct MultinodeApp {
     /// Platform  specific handlers for native and web     
     #[serde(skip)]
