@@ -6621,6 +6621,7 @@ dependencies = [
 [[package]]
 name = "rdx"
 version = "0.1.1"
+source = "git+https://github.com/DougAnderson444/rdx.git#334e4c97035f268174f536e3ca365b60aff6b3f6"
 dependencies = [
  "anyhow",
  "async-trait",
