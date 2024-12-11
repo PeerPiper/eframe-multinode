@@ -71,12 +71,9 @@ impl PeerPiper {
             .with_client(client_handle);
 
         while let Some(event) = rx_evts.next().await {
-            match event {
-                peerpiper::core::events::Events::Outer(event) => {
-                    log::debug!("[Browser] Received event: {:?}", &event);
-                    on_event.send(event).await?;
-                }
-                _ => {}
+            if let peerpiper::core::events::Events::Outer(event) = event {
+                log::debug!("[Browser] Received event: {:?}", &event);
+                on_event.send(event).await?;
             }
         }
 

@@ -73,6 +73,7 @@ impl RdxRunner {
         let peerpiper = Rc::new(RefCell::new(None));
 
         let peerpiper_clone = peerpiper.clone();
+        #[cfg(target_arch = "wasm32")]
         let (sender, receiver) = futures::channel::oneshot::channel::<()>();
 
         platform::spawn(async move {
@@ -85,6 +86,7 @@ impl RdxRunner {
             peerpiper_clone.borrow_mut().replace(peerpiper);
 
             log::info!("PeerPiper created");
+            #[cfg(target_arch = "wasm32")]
             sender.send(()).unwrap();
         });
 
