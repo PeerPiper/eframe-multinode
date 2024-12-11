@@ -2,10 +2,6 @@
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    /// Error creatign OPFS Blockstore
-    #[error("Blockstore Error: {0}")]
-    Blockstore(String),
-
     /// Futures channel oneshot canceled
     #[error("Oneshot canceled")]
     OneshotCanceled(#[from] futures::channel::oneshot::Canceled),
