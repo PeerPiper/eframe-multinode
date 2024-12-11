@@ -62,6 +62,7 @@ interface host {
 interface run {
 
   use types.{event};
+  use host.{mk-error, key-args};
 
   /// loads just the XML like markdown
   load: func() -> string;
@@ -69,6 +70,8 @@ interface run {
   /// Creates a data provenance log, returns the serialized log.
   create: func(lock: string, unlock: string) -> bool;
 
+  /// Re-export get-mk, so that the rhai script can check to see if we have an available Multikey to use 
+  getmk: func() -> option<list<u8>>;
 }
 
 /// An example world for the component to target.

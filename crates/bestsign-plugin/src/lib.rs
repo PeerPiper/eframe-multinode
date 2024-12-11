@@ -1,7 +1,7 @@
 #[allow(warnings)]
 mod bindings;
 
-use bestsign_core::{Base, EncodedVlad};
+use bestsign_core::{Base, Codec, EncodedVlad};
 use bindings::component::plugin::host::{
     emit, get_mk, log, prove, random_byte, Event, KeyArgs, ProveArgs,
 };
@@ -59,19 +59,23 @@ push("/entry/proof");
         });
 
         r#"
+        // Get the public(multi)key from the wallet, if unlocked.
+        let mk = getmk();
 
-        if !is_def_var("vlad") {
+        if !is_def_var("vlad") || type_of(mk) != "array" {
             render(`
                 <Vertical>
                     <Text>{{lock}}</Text>
                     <Text>{{unlock}}</Text>
                     <Button on_click=create(lock, unlock)>Create Plog</Button>
+                    {{mk}}
                 </Vertical>
             `)
         } else {
             render(`
                 <Vertical>
                     <Label>{{vlad}}</Label>
+                    <Label>pub multikey: ` + mk + `</Label>
                 </Vertical>
             `)
         }
@@ -81,6 +85,21 @@ push("/entry/proof");
 
     fn create(lock: String, unlock: String) -> bool {
         create_plog(lock, unlock).is_ok()
+    }
+
+    /// re-export get_mk so that rhai Script can call it
+    fn getmk() -> Option<Vec<u8>> {
+        let codec = Codec::Ed25519Priv.to_string();
+        let args = KeyArgs {
+            key: "/blah_blah".to_string(), // doesn't matter, because we only have one ed25519 key from seed and it
+            // doesn't matter what we calll it
+            codec, // only thing that matters is the codec
+            threshold: 1,
+            limit: 1,
+        };
+        let pk = get_mk(&args);
+        log(&format!("getmk results pk: {:?}", pk));
+        pk.ok()
     }
 }
 

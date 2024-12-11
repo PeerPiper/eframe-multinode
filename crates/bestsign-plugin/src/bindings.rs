@@ -476,11 +476,50 @@ pub mod exports {
                         false => 0,
                     }
                 }
+                #[doc(hidden)]
+                #[allow(non_snake_case)]
+                pub unsafe fn _export_getmk_cabi<T: Guest>() -> *mut u8 {
+                    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
+                    let result0 = T::getmk();
+                    let ptr1 = _RET_AREA.0.as_mut_ptr().cast::<u8>();
+                    match result0 {
+                        Some(e) => {
+                            *ptr1.add(0).cast::<u8>() = (1i32) as u8;
+                            let vec2 = (e).into_boxed_slice();
+                            let ptr2 = vec2.as_ptr().cast::<u8>();
+                            let len2 = vec2.len();
+                            ::core::mem::forget(vec2);
+                            *ptr1.add(8).cast::<usize>() = len2;
+                            *ptr1.add(4).cast::<*mut u8>() = ptr2.cast_mut();
+                        }
+                        None => {
+                            *ptr1.add(0).cast::<u8>() = (0i32) as u8;
+                        }
+                    };
+                    ptr1
+                }
+                #[doc(hidden)]
+                #[allow(non_snake_case)]
+                pub unsafe fn __post_return_getmk<T: Guest>(arg0: *mut u8) {
+                    let l0 = i32::from(*arg0.add(0).cast::<u8>());
+                    match l0 {
+                        0 => {}
+                        _ => {
+                            let l1 = *arg0.add(4).cast::<*mut u8>();
+                            let l2 = *arg0.add(8).cast::<usize>();
+                            let base3 = l1;
+                            let len3 = l2;
+                            _rt::cabi_dealloc(base3, len3 * 1, 1);
+                        }
+                    }
+                }
                 pub trait Guest {
                     /// loads just the XML like markdown
                     fn load() -> _rt::String;
                     /// Creates a data provenance log, returns the serialized log.
                     fn create(lock: _rt::String, unlock: _rt::String) -> bool;
+                    /// Re-export get-mk, so that the rhai script can check to see if we have an available Multikey to use
+                    fn getmk() -> Option<_rt::Vec<u8>>;
                 }
                 #[doc(hidden)]
                 macro_rules! __export_component_plugin_run_cabi {
@@ -494,15 +533,21 @@ pub mod exports {
                         "component:plugin/run#create"] unsafe extern "C" fn
                         export_create(arg0 : * mut u8, arg1 : usize, arg2 : * mut u8,
                         arg3 : usize,) -> i32 { $($path_to_types)*::
-                        _export_create_cabi::<$ty > (arg0, arg1, arg2, arg3) } };
+                        _export_create_cabi::<$ty > (arg0, arg1, arg2, arg3) }
+                        #[export_name = "component:plugin/run#getmk"] unsafe extern "C"
+                        fn export_getmk() -> * mut u8 { $($path_to_types)*::
+                        _export_getmk_cabi::<$ty > () } #[export_name =
+                        "cabi_post_component:plugin/run#getmk"] unsafe extern "C" fn
+                        _post_return_getmk(arg0 : * mut u8,) { $($path_to_types)*::
+                        __post_return_getmk::<$ty > (arg0) } };
                     };
                 }
                 #[doc(hidden)]
                 pub(crate) use __export_component_plugin_run_cabi;
                 #[repr(align(4))]
-                struct _RetArea([::core::mem::MaybeUninit<u8>; 8]);
+                struct _RetArea([::core::mem::MaybeUninit<u8>; 12]);
                 static mut _RET_AREA: _RetArea = _RetArea(
-                    [::core::mem::MaybeUninit::uninit(); 8],
+                    [::core::mem::MaybeUninit::uninit(); 12],
                 );
             }
         }
@@ -631,9 +676,9 @@ pub(crate) use __export_plugin_world_impl as export;
 #[cfg(target_arch = "wasm32")]
 #[link_section = "component-type:wit-bindgen:0.35.0:component:plugin:plugin-world:encoded world"]
 #[doc(hidden)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 731] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xd8\x04\x01A\x02\x01\
-A\x0a\x01B\x07\x01r\x02\x04names\x05values\x04\0\x05event\x03\0\0\x01r\x04\x03ke\
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 816] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xad\x05\x01A\x02\x01\
+A\x0c\x01B\x07\x01r\x02\x04names\x05values\x04\0\x05event\x03\0\0\x01r\x04\x03ke\
 ys\x05codecs\x09threshold}\x05limit}\x04\0\x08key-args\x03\0\x02\x01p}\x01r\x02\x02\
 mk\x04\x04data\x04\x04\0\x0aprove-args\x03\0\x05\x03\0\x16component:plugin/types\
 \x05\0\x02\x03\0\0\x05event\x03\0\x05event\x03\0\x01\x02\x03\0\0\x08key-args\x02\
@@ -644,11 +689,14 @@ key-error\x01s\0\x0dkey-not-found\x01s\0\x04\0\x08mk-error\x03\0\x06\x01@\x01\x0
 evt\x01\x01\0\x04\0\x04emit\x01\x08\x01@\x01\x03msgs\x01\0\x04\0\x03log\x01\x09\x01\
 @\0\0}\x04\0\x0brandom-byte\x01\x0a\x01p}\x01j\x01\x0b\x01\x07\x01@\x01\x04args\x03\
 \0\x0c\x04\0\x06get-mk\x01\x0d\x01@\x01\x04args\x05\0\x0c\x04\0\x05prove\x01\x0e\
-\x03\0\x15component:plugin/host\x05\x05\x01B\x06\x02\x03\x02\x01\x01\x04\0\x05ev\
-ent\x03\0\0\x01@\0\0s\x04\0\x04load\x01\x02\x01@\x02\x04locks\x06unlocks\0\x7f\x04\
-\0\x06create\x01\x03\x04\0\x14component:plugin/run\x05\x06\x04\0\x1dcomponent:pl\
-ugin/plugin-world\x04\0\x0b\x12\x01\0\x0cplugin-world\x03\0\0\0G\x09producers\x01\
-\x0cprocessed-by\x02\x0dwit-component\x070.220.0\x10wit-bindgen-rust\x060.35.0";
+\x03\0\x15component:plugin/host\x05\x05\x02\x03\0\x01\x08mk-error\x02\x03\0\x01\x08\
+key-args\x01B\x0e\x02\x03\x02\x01\x01\x04\0\x05event\x03\0\0\x02\x03\x02\x01\x06\
+\x04\0\x08mk-error\x03\0\x02\x02\x03\x02\x01\x07\x04\0\x08key-args\x03\0\x04\x01\
+@\0\0s\x04\0\x04load\x01\x06\x01@\x02\x04locks\x06unlocks\0\x7f\x04\0\x06create\x01\
+\x07\x01p}\x01k\x08\x01@\0\0\x09\x04\0\x05getmk\x01\x0a\x04\0\x14component:plugi\
+n/run\x05\x08\x04\0\x1dcomponent:plugin/plugin-world\x04\0\x0b\x12\x01\0\x0cplug\
+in-world\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.2\
+20.0\x10wit-bindgen-rust\x060.35.0";
 #[inline(never)]
 #[doc(hidden)]
 pub fn __link_custom_section_describing_imports() {

@@ -14,7 +14,9 @@ use seed_keeper_core::credentials::{Credentials, MinString, Wallet};
 
 static WALLET: LazyLock<Mutex<Option<Wallet>>> = LazyLock::new(|| Mutex::new(None));
 
-/// static HashMap to map the epk to the (key, mk) tuple.
+/// Encoded Public Key (epk) map
+///
+/// A static HashMap to map the epk to the (key, mk) tuple.
 static EPK_MAP: LazyLock<Mutex<HashMap<EncodedMultikey, (Key, Multikey)>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
@@ -136,8 +138,7 @@ impl Guest for Component {
         process_creds(credentials);
     }
 
-    /// Gets the Multikey
-    // get-mk: func(args: key-args) -> list<u8>;
+    /// Returns the Public Multikey associated with the given key args.
     fn get_mk(args: KeyArgs) -> Result<Vec<u8>, MkError> {
         let codec = Codec::try_from(args.codec.as_str())
             .map_err(|e| MkError::InvalidCodec(format!("Invalid codec, found: {}", e)))?;
@@ -166,16 +167,16 @@ impl Guest for Component {
 
         log("Getting PK for Multikey");
 
-        let pk = mk
+        let public_key = mk
             .conv_view()
             .map_err(multikey_error)?
             .to_public_key()
             .map_err(multikey_error)?;
 
-        log(&format!("Got PK: {:?}", pk));
+        log(&format!("Got PK: {:?}", public_key));
 
         let key = Key::try_from(args.key).map_err(multikey_error)?;
-        let epk = EncodedMultikey::from(pk.clone());
+        let epk = EncodedMultikey::from(public_key.clone());
 
         // add to key map
         EPK_MAP
@@ -183,7 +184,7 @@ impl Guest for Component {
             .unwrap()
             .insert(epk, (key.clone(), mk.clone()));
 
-        Ok(pk.into())
+        Ok(public_key.into())
     }
 
     /// Proves the data for the given Multikey.

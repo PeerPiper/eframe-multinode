@@ -5,7 +5,7 @@ mod layer;
 
 use layer::LayerPlugin;
 use rdx::{
-    layer::{Instantiator, Value},
+    layer::{rhai::Dynamic, Instantiator, Value},
     PluginDeets,
 };
 
@@ -24,7 +24,7 @@ use web::state::State;
 use crate::app::platform::{self, create_peerpiper};
 
 use std::{collections::HashMap, sync::Arc};
-use std::{ops::Deref as _, sync::Mutex};
+use std::{ops::Deref, sync::Mutex};
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::Mutex as AsyncMutex;
 
@@ -118,25 +118,47 @@ impl RdxRunner {
                 .insert(wallet_name.to_string(), arc_wallet.clone());
         }
 
-        let mut wallet_deets =
-            PluginDeets::new(wallet_name.to_string(), arc_wallet, rdx_source.to_string());
+        let mut wallet_deets = PluginDeets::new(
+            wallet_name.to_string(),
+            arc_wallet.clone(),
+            rdx_source.to_string(),
+        );
 
-        let arc_wallet = wallet_deets.plugin.clone();
+        // a closure that enables us to register a function by name with zero arguments
+        let register = |deets: &mut PluginDeets<State>, fn_name, args| {
+            let plugin_clone = deets.plugin.clone();
+            deets.engine.register_fn(fn_name, move || {
+                let res = {
+                    //let plugin_clone = plugin_clone.deref();
+                    let mut lock = plugin_clone.lock().unwrap();
+                    lock.call(fn_name, args).unwrap()
+                };
 
-        let plugin_clone = send_wrapper::SendWrapper::new(arc_wallet.clone());
-        wallet_deets.engine.register_fn("unlocked", move || {
-            let res = {
-                let plugin_clone = plugin_clone.deref();
-                let mut lock = plugin_clone.lock().unwrap();
-                lock.call("unlocked", &[]).unwrap()
-            };
-            // if res is Some, unwrap and return it. If none, return false.
-            res.map(|v| match v {
-                Value::Bool(b) => b,
-                _ => false,
-            })
-            .unwrap_or(false)
-        });
+                res.map(|v| match v {
+                    Value::Bool(b) => Dynamic::from(b),
+                    Value::Option(ov) => match ov.deref().clone() {
+                        Some(Value::Bool(b)) => Dynamic::from(b),
+                        Some(Value::List(list)) => {
+                            let list = list
+                                .into_iter()
+                                .map(|v| match v {
+                                    Value::String(s) => Dynamic::from(s),
+                                    Value::U8(u) => Dynamic::from(u),
+                                    Value::Bool(b) => Dynamic::from(b),
+                                    _ => Dynamic::from("Unsupported type"),
+                                })
+                                .collect::<Vec<_>>();
+                            Dynamic::from(list)
+                        }
+                        _ => false.into(),
+                    },
+                    _ => false.into(),
+                })
+                .unwrap_or(false.into())
+            });
+        };
+
+        register(&mut wallet_deets, "unlocked", &[]);
 
         plugins.insert(wallet_name.to_string(), wallet_deets);
 
@@ -164,10 +186,13 @@ impl RdxRunner {
                     .insert(name.to_string(), arc_plugin.clone());
             }
 
-            plugins.insert(
-                name.to_string(),
-                PluginDeets::new(name.to_string(), arc_plugin, rdx_source.to_string()),
-            );
+            let mut plugin_deets =
+                PluginDeets::new(name.to_string(), arc_plugin, rdx_source.to_string());
+
+            // register get_mk with rhai, so we can bind it inthe plugin and call it from rhai scripts
+            register(&mut plugin_deets, "getmk", &[]);
+
+            plugins.insert(name.to_string(), plugin_deets);
         }
 
         // clone the arc_collection, pass it into the spawned task,
