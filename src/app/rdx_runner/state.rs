@@ -98,10 +98,10 @@ impl State {
         }
     }
 
-    /// // Not needed for native targets.
-    /// Initialize the state with a scope from storage, if it exists.
-    ///// Same steps as in new(), but using self.* instead.
-    //pub fn init(&self) {
+    // / // Not needed for native targets, they are very fast at opening PeerPiper.
+    // / Initialize the state with a scope from storage, if it exists.
+    // /// Same steps as in new(), but using self.* instead.
+    // pub fn init(&self) {
     //    let mut scope = self.scope.clone();
     //
     //    if let Some(key) = self.cid_map.get_string(&self.name) {
