@@ -7,6 +7,8 @@ use peerpiper::core::events::AllCommands;
 use peerpiper::core::events::SystemCommand;
 use peerpiper::core::Cid;
 use peerpiper::core::ReturnValues;
+use rdx::layer::ScopeRef;
+use rdx::layer::ScopeRefMut;
 use rdx::layer::{
     rhai::{Dynamic, Scope},
     Inner,
@@ -26,7 +28,7 @@ pub struct State {
     /// The [egui::Context] that holds the UI state. Used to request repaints
     egui_ctx: Option<egui::Context>,
     /// Handler to PeerPiper SystemCommander
-    peerpiper: Option<Arc<Mutex<PeerPiper>>>,
+    peerpiper: Arc<Mutex<Option<PeerPiper>>>,
     /// String Store map the name of the plugin to the CID of the state
     cid_map: StringStore,
 }
@@ -35,11 +37,14 @@ impl State {
     pub fn new(
         name: impl AsRef<str> + Clone,
         ctx: Option<egui::Context>,
-        peerpiper: Option<Arc<Mutex<PeerPiper>>>,
+        peerpiper: Arc<Mutex<Option<PeerPiper>>>,
     ) -> Self {
         let mut scope = Scope::new();
 
+        #[cfg(not(target_arch = "wasm32"))]
         let cid_map = StringStore::new(name.as_ref());
+        #[cfg(target_arch = "wasm32")]
+        let cid_map = StringStore::new();
 
         // Load the CID of the state from the platform storage
         // filesystem, localstorage, etc.
@@ -49,15 +54,15 @@ impl State {
         // and set the scope to the new scope
         if let Some(key) = cid_map.get_string(name.as_ref()) {
             if let Ok(cid) = Cid::try_from(key.clone()) {
-                if let Some(ref peerpiper) = peerpiper {
-                    let (tx, rx) = std::sync::mpsc::channel();
-                    let peerpiper = peerpiper.clone();
-                    platform::spawn(async move {
+                let (tx, rx) = std::sync::mpsc::channel();
+
+                let peerpiper_clone = peerpiper.clone();
+
+                platform::spawn(async move {
+                    let binding = peerpiper_clone.lock().await;
+                    if let Some(ref mut peerpiper) = binding.as_ref() {
                         let command = AllCommands::System(SystemCommand::Get { key: cid.into() });
-                        let pp = {
-                            let mut peerpiper = peerpiper.lock().await;
-                            peerpiper.order(command).await
-                        };
+                        let pp = { peerpiper.order(command).await };
 
                         let Ok(ReturnValues::Data(bytes)) = pp else {
                             tracing::warn!("Failed to get state from CID: {}", key);
@@ -72,12 +77,13 @@ impl State {
                             tx.send(None).unwrap();
                             return;
                         };
+                        tracing::info!("*** State loaded: {:?}", scope);
                         tx.send(Some(scope)).unwrap();
-                    });
-
-                    if let Some(sco) = rx.recv().unwrap() {
-                        scope = sco;
                     }
+                });
+
+                if let Some(sco) = rx.recv().unwrap() {
+                    scope = sco;
                 }
             }
         }
@@ -92,6 +98,49 @@ impl State {
         }
     }
 
+    /// Initialize the state with a scope from storage, if it exists.
+    /// Same steps as in new(), but using self.* instead.
+    pub fn init(&self) {
+        let mut scope = self.scope.clone();
+
+        if let Some(key) = self.cid_map.get_string(&self.name) {
+            if let Ok(cid) = Cid::try_from(key.clone()) {
+                let (tx, rx) = std::sync::mpsc::channel();
+
+                let peerpiper_clone = self.peerpiper.clone();
+
+                platform::spawn(async move {
+                    let mut binding = peerpiper_clone.lock().await;
+                    if let Some(ref mut peerpiper) = binding.as_mut() {
+                        let command = AllCommands::System(SystemCommand::Get { key: cid.into() });
+                        let pp = { peerpiper.order(command).await };
+
+                        let Ok(ReturnValues::Data(bytes)) = pp else {
+                            tracing::warn!("Failed to get state from CID: {}", key);
+                            tx.send(None).unwrap();
+                            return;
+                        };
+
+                        let Ok(scope): Result<Scope, cbor4ii::serde::DecodeError<_>> =
+                            cbor4ii::serde::from_slice(&bytes)
+                        else {
+                            tracing::warn!("Failed to decode state scope from CID: {}", key);
+                            tx.send(None).unwrap();
+                            return;
+                        };
+                        tracing::info!("*** State loaded: {:?}", scope);
+                        tx.send(Some(scope)).unwrap();
+                    }
+                });
+
+                if let Some(sco) = rx.recv().unwrap() {
+                    scope = sco;
+                }
+            }
+        }
+        tracing::info!("*** State loaded: {:?}", scope);
+    }
+
     /// Persist the [rhai::Scope] state on disk
     ///
     /// Should work in both browser and native environments
@@ -104,12 +153,12 @@ impl State {
         let bytes = cbor4ii::serde::to_vec(Vec::new(), &self.scope)?;
         // Save the serialized state to disk, independent of the platform
         // for this we can use peerpiper SystemCommandHanlder to put the bytes into the local system
-        let Some(cmdr) = &self.peerpiper else {
+        let mut binding = self.peerpiper.lock().await;
+        let Some(cmdr) = binding.as_mut() else {
             tracing::warn!("Commander is not set yet");
             return Err(anyhow::anyhow!("Commander is not set yet"))?;
         };
 
-        let mut cmdr = cmdr.lock().await;
         let command = AllCommands::System(SystemCommand::Put { bytes });
         let Ok(ReturnValues::ID(cid)) = cmdr.order(command).await else {
             return Err(anyhow::anyhow!("Failed to order command: Put"))?;
@@ -150,12 +199,12 @@ impl Inner for State {
         }
     }
 
-    fn scope(&self) -> &Scope {
-        &self.scope
+    fn scope(&self) -> ScopeRef {
+        ScopeRef::Borrowed(&self.scope)
     }
 
-    fn scope_mut(&mut self) -> &mut Scope<'static> {
-        &mut self.scope
+    fn scope_mut(&mut self) -> ScopeRefMut {
+        ScopeRefMut::Borrowed(&mut self.scope)
     }
 
     // into_scope with 'static lifetime'

@@ -11,15 +11,22 @@ use std::{
 use rdx::layer::{
     noop_waker,
     poll::{MakeFuture, PollableFuture},
-    rhai, runtime_layer, Component, Engine, Error, Func, FuncType, Inner, Instance, Linker, List,
-    ListType, Pollable, RecordType, Resource, ResourceTable, ResourceType, Store, SystemTime,
-    Value, ValueType,
+    Component, Engine, Error, Func, FuncType, Inner, Instance, Linker, List, ListType, Pollable,
+    RecordType, Resource, ResourceTable, ResourceType, Store, SystemTime, Value, ValueType,
 };
 use rdx::wasm_component_layer::{ResultType, VariantCase, VariantType};
 use rdx::{layer::*, wasm_component_layer::ResultValue};
 
+#[cfg(target_arch = "wasm32")]
+use send_wrapper::SendWrapper;
+#[cfg(target_arch = "wasm32")]
+use std::ops::DerefMut;
+
 /// Use wasm_component_layer to intanitate a plugin and some state data
 pub struct LayerPlugin<T: Inner + Send + Sync> {
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) store: SendWrapper<Store<T, runtime_layer::Engine>>,
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) store: Store<T, runtime_layer::Engine>,
     raw_instance: Instance,
 }
@@ -29,11 +36,14 @@ impl<T: Inner + Send + Sync + 'static> LayerPlugin<T> {
     pub fn new(
         bytes: &[u8],
         data: T,
-        wallet_layer: Option<Arc<Mutex<Box<dyn Instantiator<T>>>>>,
+        wallet_layer: Option<Arc<Mutex<dyn Instantiator<T>>>>,
     ) -> Self {
         let (instance, store) = instantiate_instance(bytes, data, wallet_layer);
 
         Self {
+            #[cfg(target_arch = "wasm32")]
+            store: SendWrapper::new(store),
+            #[cfg(not(target_arch = "wasm32"))]
             store,
             raw_instance: instance,
         }
@@ -49,12 +59,8 @@ impl<T: Inner + Send + Sync + 'static> Instantiator<T> for LayerPlugin<T> {
         &mut self.store
     }
 
-    fn scope(&self) -> &rhai::Scope {
-        self.store.data().scope()
-    }
-
     fn call(&mut self, name: &str, arguments: &[Value]) -> Result<Option<Value>, Error> {
-        tracing::info!("Calling function: {}", name);
+        tracing::trace!("Calling function: {}", name);
         let export_instance = self
             .raw_instance
             .exports()
@@ -88,6 +94,14 @@ impl<T: Inner + Send + Sync + 'static> Instantiator<T> for LayerPlugin<T> {
             _ => vec![Value::Bool(false); func_result_len],
         };
 
+        #[cfg(target_arch = "wasm32")]
+        func.call(self.store.deref_mut(), arguments, &mut results)
+            .map_err(|e| {
+                tracing::error!("Error calling function: {:?}", e);
+                e
+            })?;
+
+        #[cfg(not(target_arch = "wasm32"))]
         func.call(&mut self.store, arguments, &mut results)
             .map_err(|e| {
                 tracing::error!("Error calling function: {:?}", e);
@@ -105,7 +119,7 @@ impl<T: Inner + Send + Sync + 'static> Instantiator<T> for LayerPlugin<T> {
 pub fn instantiate_instance<T: Inner + Send + Sync + 'static>(
     bytes: &[u8],
     data: T,
-    wallet_layer: Option<Arc<Mutex<Box<dyn Instantiator<T>>>>>,
+    wallet_layer: Option<Arc<Mutex<dyn Instantiator<T>>>>,
 ) -> (Instance, Store<T, runtime_layer::Engine>) {
     let table = Arc::new(Mutex::new(ResourceTable::new()));
 

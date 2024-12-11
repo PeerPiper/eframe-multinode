@@ -80,11 +80,15 @@ web-sys = { version = "0.3.70", features = [
   "RequestMode",
   "Response",
   "Headers",
+  "Storage",
+  "Window",
 ] }
 getrandom = { version = "0.2", features = ["js"] }
 egui_suspense = "0.6.0"
 serde-wasm-bindgen = "0.6"
 peerpiper-browser = { git = "https://github.com/PeerPiper/peerpiper.git" }
+tokio = { version = "1", features = ["sync"] }
+gloo-timers = { version = "0.3.0", features = ["futures"] }
 
 [build-dependencies]
 wasmparser = "0.221"

@@ -36,7 +36,7 @@ impl PeerPiper {
     /// Throws an error if network command are sent before connecting to the network.
     ///
     /// put and get can store and retrieve data locally without network connection.
-    pub async fn order(&mut self, command: AllCommands) -> Result<ReturnValues, Error> {
+    pub async fn order(&self, command: AllCommands) -> Result<ReturnValues, Error> {
         Ok(self.commander.order(command).await?)
     }
 
@@ -55,7 +55,7 @@ impl PeerPiper {
 
         // command_sender will be used by other wasm_bindgen functions to send commands to the network
         // so we will need to wrap it in a Mutex or something to make it thread safe.
-        let (command_sender, command_receiver) = mpsc::channel(8);
+        let (command_sender, command_receiver) = tokio::sync::mpsc::channel(8);
 
         platform::spawn(async move {
             peerpiper::start(tx_evts, command_receiver, tx_client, libp2p_endpoints)

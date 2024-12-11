@@ -7,14 +7,13 @@ mod error;
 pub mod peerpiper;
 mod settings;
 mod storage;
-pub use storage::StringStore;
 
 pub use error::Error;
-
-use multiaddr::Multiaddr;
 pub use peerpiper_native::NativeBlockstore as Blockstore;
 pub(crate) use settings::Settings;
+pub use storage::StringStore;
 
+use multiaddr::Multiaddr;
 use peerpiper_plugins::tokio::{ExternalEvents, PluggableClient, PluggablePiper};
 use std::future::Future;
 use std::sync::{Arc, Mutex};
@@ -24,6 +23,7 @@ use std::sync::{Arc, Mutex};
 pub fn spawn(f: impl Future<Output = ()> + Send + 'static) {
     tokio::spawn(f);
 }
+
 /// Track whether the Context has been set
 #[derive(Debug, Default)]
 pub(crate) struct ContextSet {

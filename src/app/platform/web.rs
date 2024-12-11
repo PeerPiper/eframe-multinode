@@ -5,17 +5,28 @@
 //! This module contains the web specific code for the platform.
 //! Instead of spinning up a native node, this code would connect to a remote node
 //! using peerpiper-browser.
-mod commander;
+pub mod peerpiper;
 mod settings;
+mod storage;
 mod web_error;
 mod widget;
 
-use crate::app::platform;
-use commander::PeerPiper;
-use multiaddr::Multiaddr;
+//pub use peerpiper_browser::opfs::OPFSBlockstore as Blockstore;
+pub use peerpiper::OPFSWrapped as Blockstore;
 pub(crate) use settings::Settings;
+pub use storage::StringStore;
+pub use web_error::WebError as Error;
+
+use crate::app::platform;
+use crate::app::platform::peerpiper::PeerPiper;
+use multiaddr::Multiaddr;
 use std::cell::RefCell;
+use std::future::Future;
 use std::rc::Rc;
+
+pub fn spawn(f: impl Future<Output = ()> + 'static) {
+    wasm_bindgen_futures::spawn_local(f);
+}
 
 /// Reference counted [egui::Context] with a flag to indicate whether it has been set
 /// Track whether the Context has been set
@@ -64,7 +75,7 @@ impl Default for Platform {
         let peerpiper_clone = peerpiper.clone();
         // new PeerPiper with built-in Commander and BrowserBlockStore
         platform::spawn(async move {
-            let Ok(piper) = PeerPiper::new().await else {
+            let Ok(piper) = peerpiper::create_peerpiper().await else {
                 log::error!("Error creating PeerPiper BrowserBlockStore instance");
                 return;
             };
@@ -111,4 +122,11 @@ impl Platform {
     pub fn load_plugin(&self, _name: String, _bytes: Vec<u8>) {
         // TODO
     }
+
+    ///// Pass along PeerPiper comamnds to the PeerPiper instance
+    //pub fn command(&self, command: commander::PeerPiperCommand) {
+    //    if let Some(piper) = self.peerpiper.borrow_mut().as_ref() {
+    //        piper.order(command);
+    //    }
+    //}
 }

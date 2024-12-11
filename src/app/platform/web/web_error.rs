@@ -15,7 +15,11 @@ pub enum WebError {
     #[error("SendError: {0}")]
     SendError(#[from] futures::channel::mpsc::SendError),
 
-    /// from peerpiper_core::error::Error
+    /// from peerpiper::core::error::Error
     #[error("PeerPiper Core Error: {0}")]
-    PeerPiperCoreError(#[from] peerpiper_core::error::Error),
+    PeerPiperCoreError(#[from] peerpiper::core::error::Error),
+
+    /// from peerpiper_browser::error::Error
+    #[error("PeerPiper Browser Error: {0}")]
+    PeerPiperBrowserError(#[from] peerpiper_browser::Error),
 }

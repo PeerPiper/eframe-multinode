@@ -4,6 +4,9 @@ mod platform;
 mod rdx_runner;
 //mod widgets;
 
+#[cfg(target_arch = "wasm32")]
+pub use peerpiper::core::Cid;
+
 pub(crate) use platform::Platform;
 use platform::Settings;
 use rdx_runner::RdxRunner;
