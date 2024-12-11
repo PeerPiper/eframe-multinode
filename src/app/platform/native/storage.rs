@@ -34,8 +34,8 @@ impl StringStore {
         fs::write(path, value).unwrap();
     }
 
-    pub fn flush(&mut self) {
-        // rm the directory contents
-        fs::remove_dir_all(&self.dir).unwrap();
-    }
+    //pub fn flush(&mut self) {
+    //    // rm the directory contents
+    //    fs::remove_dir_all(&self.dir).unwrap();
+    //}
 }
