@@ -1,0 +1,87 @@
+//! Commond types that each plugin has access to.
+package host:component;
+
+interface types {
+  /// Event type where value is a string.
+  record string-event {
+    /// The variable name
+    name: string,
+    value: string
+  }
+
+  /// Event type where value is a list<u8>.
+  record bytes-event {
+    /// The variable name
+    name: string,
+    value: list<u8>
+  }
+
+  /// Event wherte there is a list of strings 
+  record string-list-event {
+    /// The variable name
+    name: string,
+    value: list<string>
+  }
+
+  /// Event is a variant of string and bytes events. 
+  variant event {
+    text(string-event),
+    bytes(bytes-event),
+    string-list(string-list-event)
+  }
+
+  /// Key arguments for getting a Multikey
+  record key-args {
+    /// The key
+    key: string,
+    /// The codec
+    codec: string,
+    /// THreshold 
+    threshold: u8,
+    /// Limit 
+    limit: u8
+  }
+
+  record prove-args {
+    /// The Multikey
+    mk: list<u8>,
+    /// The data
+    data: list<u8>,
+  }
+}
+
+interface host {
+  use types.{event, key-args, prove-args};
+
+  /// emit an event.
+  emit: func(evt: event);
+
+  /// log a message.
+  log: func(msg: string);
+
+  /// get a random byte
+  random-byte: func() -> u8;
+
+  /// get-mk Error type 
+  variant mk-error {
+    /// The error message
+    invalid-codec(string),
+    /// Wallet uninitialized 
+    wallet-uninitialized,
+    /// Mulitkey Error 
+    multikey-error(string),
+    /// Key not found 
+    key-not-found(string),
+  }
+
+  /// Gets the Multikey 
+  get-mk: func(args: key-args) -> result<list<u8>, mk-error>;
+
+  /// Proves the data for the given Multikey.
+  prove: func(args: prove-args) -> result<list<u8>, mk-error>;
+}
+
+world host-world {
+  export types;
+  export host;
+}

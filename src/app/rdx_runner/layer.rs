@@ -11,6 +11,7 @@ use std::{
 use rdx::layer::{
     noop_waker,
     poll::{MakeFuture, PollableFuture},
+    rhai::Dynamic,
     Component, Engine, Error, Func, FuncType, Inner, Instance, Linker, List, ListType, Pollable,
     RecordType, Resource, ResourceTable, ResourceType, Store, SystemTime, Value, ValueType,
 };
@@ -20,7 +21,22 @@ use rdx::{layer::*, wasm_component_layer::ResultValue};
 #[cfg(target_arch = "wasm32")]
 use send_wrapper::SendWrapper;
 #[cfg(target_arch = "wasm32")]
+use std::cell::RefCell;
+#[cfg(target_arch = "wasm32")]
 use std::ops::DerefMut;
+#[cfg(target_arch = "wasm32")]
+use std::rc::Rc;
+
+#[cfg(not(target_arch = "wasm32"))]
+use tokio::sync::Mutex as AsyncMutex;
+
+// type alias for the peerpiper
+#[cfg(not(target_arch = "wasm32"))]
+type PeerPiperType = Arc<AsyncMutex<Option<PeerPiper>>>;
+#[cfg(target_arch = "wasm32")]
+type PeerPiperType = Rc<RefCell<Option<PeerPiper>>>;
+
+use crate::app::platform::peerpiper::PeerPiper;
 
 /// Use wasm_component_layer to intanitate a plugin and some state data
 pub struct LayerPlugin<T: Inner + Send + Sync> {
@@ -37,8 +53,9 @@ impl<T: Inner + Send + Sync + 'static> LayerPlugin<T> {
         bytes: &[u8],
         data: T,
         wallet_layer: Option<Arc<Mutex<dyn Instantiator<T>>>>,
+        peerpiper: Option<PeerPiperType>,
     ) -> Self {
-        let (instance, store) = instantiate_instance(bytes, data, wallet_layer);
+        let (instance, store) = instantiate_instance(bytes, data, wallet_layer, peerpiper);
 
         Self {
             #[cfg(target_arch = "wasm32")]
@@ -120,6 +137,7 @@ pub fn instantiate_instance<T: Inner + Send + Sync + 'static>(
     bytes: &[u8],
     data: T,
     wallet_layer: Option<Arc<Mutex<dyn Instantiator<T>>>>,
+    peerpiper: Option<PeerPiperType>,
 ) -> (Instance, Store<T, runtime_layer::Engine>) {
     let table = Arc::new(Mutex::new(ResourceTable::new()));
 
@@ -355,7 +373,7 @@ pub fn instantiate_instance<T: Inner + Send + Sync + 'static>(
         .unwrap();
 
     let host_interface = linker
-        .define_instance("component:plugin/host".try_into().unwrap())
+        .define_instance("host:component/host".try_into().unwrap())
         .unwrap();
 
     // "log" function using tracing
@@ -375,29 +393,132 @@ pub fn instantiate_instance<T: Inner + Send + Sync + 'static>(
         )
         .unwrap();
 
-    // params is a record with name and value
-    let record = RecordType::new(
-        None,
-        vec![("name", ValueType::String), ("value", ValueType::String)],
-    )
-    .unwrap();
+    ///// Event type where value is a string.
+    //record string-event {
+    //  /// The variable name
+    //  name: string,
+    //  value: string
+    //}
+    //
+    ///// Event type where value is a list<u8>.
+    //record bytes-event {
+    //  /// The variable name
+    //  name: string,
+    //  value: list<u8>
+    //}
+    //
+    ///// Event wherte there is a list of strings
+    //record string-list-event {
+    //  /// The variable name
+    //  name: string,
+    //  value: list<string>
+    //}
+    //
+    ///// Event is a variant of string and bytes events.
+    //variant event {
+    //  text(string-event),
+    //  bytes(bytes-event),
+    //  string-list(string-list-event)
+    //}
+
+    let text_variant = VariantCase::new(
+        "text",
+        Some(ValueType::Record(
+            RecordType::new(
+                None,
+                vec![("name", ValueType::String), ("value", ValueType::String)],
+            )
+            .unwrap(),
+        )),
+    );
+
+    let bytes_variant = VariantCase::new(
+        "bytes",
+        Some(ValueType::Record(
+            RecordType::new(
+                None,
+                vec![
+                    ("name", ValueType::String),
+                    ("value", ValueType::List(ListType::new(ValueType::U8))),
+                ],
+            )
+            .unwrap(),
+        )),
+    );
+
+    let string_list_variant = VariantCase::new(
+        "string-list",
+        Some(ValueType::Record(
+            RecordType::new(
+                None,
+                vec![
+                    ("name", ValueType::String),
+                    ("value", ValueType::List(ListType::new(ValueType::String))),
+                ],
+            )
+            .unwrap(),
+        )),
+    );
+
+    let event =
+        VariantType::new(None, vec![text_variant, bytes_variant, string_list_variant]).unwrap();
 
     host_interface
         .define_func(
             "emit",
             Func::new(
                 &mut store,
-                FuncType::new([ValueType::Record(record)], []),
+                FuncType::new([ValueType::Variant(event)], []),
                 move |mut store, params, _results| {
-                    tracing::info!("Emitting event {:?}", params);
-                    if let Value::Record(record) = &params[0] {
-                        let name = record.field("name").unwrap();
-                        let value = record.field("value").unwrap();
-
-                        if let Value::String(name) = name {
-                            if let Value::String(value) = value {
-                                tracing::info!("Updating state with {:?} {:?}", name, value);
-                                store.data_mut().update(&name, &*value);
+                    if let Value::Variant(variant) = &params[0] {
+                        tracing::debug!("Emitting event: {:?}", variant);
+                        if let Some(Value::Record(record)) = variant.value() {
+                            // record is either: string-event, bytes-event, string-list-event
+                            match record.field("value") {
+                                Some(Value::String(value)) => {
+                                    if let Some(Value::String(name)) = record.field("name") {
+                                        store.data_mut().update(&name, &*value);
+                                    }
+                                }
+                                Some(Value::List(list)) => {
+                                    tracing::debug!("Emitting list: {:?}", list);
+                                    let vals = list
+                                        .iter()
+                                        .map(|v| {
+                                            tracing::debug!("Val v is: {:?}", v);
+                                            match v {
+                                                Value::U8(u) => Dynamic::from(u),
+                                                Value::String(s) => {
+                                                    let s: String = s.to_string();
+                                                    tracing::debug!("String s is: {:?}", s);
+                                                    Dynamic::from(s)
+                                                }
+                                                Value::List(lis) => lis
+                                                    .iter()
+                                                    .map(|v| match v {
+                                                        Value::U8(u) => Dynamic::from(u),
+                                                        Value::String(s) => {
+                                                            Dynamic::from(s.to_string())
+                                                        }
+                                                        _ => Dynamic::from("Unsupported type"),
+                                                    })
+                                                    .collect::<Vec<_>>()
+                                                    .into(),
+                                                _ => Dynamic::from("Unsupported type"),
+                                            }
+                                        })
+                                        .collect::<Vec<_>>();
+                                    tracing::debug!("Emitting list: {:?}", vals);
+                                    if let Some(Value::String(name)) = record.field("name") {
+                                        tracing::debug!(
+                                            "Emitting name value pair: {:?} {:?}",
+                                            name,
+                                            vals
+                                        );
+                                        store.data_mut().update(&name, &*vals);
+                                    }
+                                }
+                                _ => {}
                             }
                         }
                     }
@@ -458,7 +579,7 @@ pub fn instantiate_instance<T: Inner + Send + Sync + 'static>(
         )
         .unwrap();
 
-        let wallet_clone = send_wrapper::SendWrapper::new(wallet_layer.clone());
+        let wallet_clone = wallet_layer.clone();
 
         // return type is:  result<list<u8>, variant<plog: string, wallet-uninitialized, multikey-error: string, config: string>>
         let ok = ValueType::List(ListType::new(ValueType::U8));
@@ -514,8 +635,8 @@ pub fn instantiate_instance<T: Inner + Send + Sync + 'static>(
         )
         .unwrap();
 
-        let wallet_clone = send_wrapper::SendWrapper::new(wallet_layer.clone());
-        // prove: func(args: prove-args) -> result<list<u8>, error>;
+        let wallet_clone = wallet_layer.clone();
+
         host_interface
             .define_func(
                 "prove",
@@ -540,5 +661,24 @@ pub fn instantiate_instance<T: Inner + Send + Sync + 'static>(
             )
             .unwrap();
     }
+
+    // if peerpiper_layer is Some, we can also add the peerpiper functions
+    // We can wire peerpiper AllCommands as host functions.
+    // For now, let's do get/put for Blockstore actions
+    if let Some(_peerpiper) = peerpiper {
+        // Let's provide both get and put functions for the blockstore
+        // these orders are async, but we get a root CID as a result,
+        // which we always save to the plugin's state StringStore
+
+        // actually you just need to save the key:value bytes to the rhai Scope,
+        // and the periodic save() will take care of the rest.
+
+        // put: func(data: list<u8>) -> string;
+        //let put_args = FuncType::new(
+        //    [ValueType::List(ListType::new(ValueType::U8))],
+        //    [ValueType::String],
+        //);
+    }
+
     (linker.instantiate(&mut store, &component).unwrap(), store)
 }

@@ -1,68 +1,9 @@
 package component:plugin;
 
-interface types {
-  /// The Event type.
-  record event {
-    /// The variable name
-    name: string,
-    value: string
-  }
-
-  /// Key arguments for getting a Multikey
-  record key-args {
-    /// The key
-    key: string,
-    /// The codec
-    codec: string,
-    /// THreshold 
-    threshold: u8,
-    /// Limit 
-    limit: u8
-  }
-
-  record prove-args {
-    /// The Multikey
-    mk: list<u8>,
-    /// The data
-    data: list<u8>,
-  }
-}
-
-interface host {
-  use types.{event, key-args, prove-args};
-
-  /// emit an event.
-  emit: func(evt: event);
-
-  /// log a message.
-  log: func(msg: string);
-
-  /// get a random byte
-  random-byte: func() -> u8;
-
-  /// get-mk Error type 
-  variant mk-error {
-    /// The error message
-    invalid-codec(string),
-    /// Wallet uninitialized 
-    wallet-uninitialized,
-    /// Mulitkey Error 
-    multikey-error(string),
-    /// Key not found 
-    key-not-found(string),
-  }
-
-  /// Gets the Multikey 
-  get-mk: func(args: key-args) -> result<list<u8>, mk-error>;
-
-  /// Proves the data for the given Multikey.
-  prove: func(args: prove-args) -> result<list<u8>, mk-error>;
-}
-
 interface run {
 
-  use types.{event};
-  use host.{mk-error, key-args};
+  // from ./deps/host.wit
+  // use host:component/types.{event, key-args};
 
   /// loads just the XML like markdown
   load: func() -> string;
@@ -77,10 +18,9 @@ interface run {
 /// An example world for the component to target.
 world plugin-world {
 
-  use types.{event};
-
   /// Import the event handler.
-  import host;
+  // from ./deps/host.wit
+  import host:component/host;
 
   export run;
   

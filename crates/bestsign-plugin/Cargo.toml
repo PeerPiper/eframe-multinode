@@ -7,6 +7,7 @@ edition = "2021"
 wit-bindgen-rt = { version = "0.36.0", features = ["bitflags"] }
 getrandom = { version = "0.2", features = ["custom"] }
 bestsign-core = { git = "ssh://git@github.com/DougAnderson444/bestsign.git" }
+serde_json = "1.0"
 
 [lib]
 crate-type = ["cdylib"]
@@ -15,3 +16,6 @@ crate-type = ["cdylib"]
 package = "component:bestsign-plugin"
 
 [package.metadata.component.dependencies]
+
+[package.metadata.component.target.dependencies]
+"host:component" = { path = "wit/deps" }

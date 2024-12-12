@@ -4,9 +4,9 @@ mod bindings;
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
 
-use bindings::component::plugin::host::{emit, log, random_byte};
-use bindings::component::plugin::types::Event;
 use bindings::exports::component::plugin::run::{Guest, KeyArgs, MkError, ProveArgs};
+use bindings::host::component::host::{emit, log, random_byte};
+use bindings::host::component::types::{Event, StringEvent};
 
 use bestsign_core::ops::config::defaults::{DEFAULT_ENTRYKEY, DEFAULT_VLAD_KEY};
 use bestsign_core::{mk, Codec, EncodedMultikey, Key, Multikey, Views as _};
@@ -153,7 +153,7 @@ impl Guest for Component {
                     .map_err(|e| MkError::InvalidCodec(format!("Invalid codec, found: {}", e)))?
             } else {
                 // get seed from wallet.seed
-                log("Creating Multikey from seed");
+                //log("Creating Multikey from seed");
                 let wallet_lock = WALLET.lock().unwrap();
                 let Some(wallet) = wallet_lock.as_ref() else {
                     return Err(MkError::WalletUninitialized);
@@ -165,15 +165,11 @@ impl Guest for Component {
 
         let mk = mk_buildr.try_build().unwrap();
 
-        log("Getting PK for Multikey");
-
         let public_key = mk
             .conv_view()
             .map_err(multikey_error)?
             .to_public_key()
             .map_err(multikey_error)?;
-
-        log(&format!("Got PK: {:?}", public_key));
 
         let key = Key::try_from(args.key).map_err(multikey_error)?;
         let epk = EncodedMultikey::from(public_key.clone());
@@ -213,10 +209,6 @@ impl Guest for Component {
             .get(&epk)
             .ok_or(MkError::KeyNotFound(epk.to_string()))?;
 
-        let is_secret = mk.attr_view().map_err(multikey_error)?.is_secret_key();
-
-        log(&format!("Is secret key: {}", is_secret));
-
         let signature = mk
             .sign_view()
             .map_err(multikey_error)?
@@ -250,23 +242,23 @@ fn process_creds(credentials: Credentials) {
     WALLET.lock().unwrap().replace(wallet);
 
     // unlock evt
-    emit(&Event {
+    emit(&Event::Text(StringEvent {
         name: "unlocked".to_string(),
         value: "true".to_string(),
-    });
+    }));
 
     // emit username and password so they can be persisted for easy login
-    emit(&Event {
+    emit(&Event::Text(StringEvent {
         name: "username".to_string(),
         value: username,
-    });
+    }));
 
-    emit(&Event {
+    emit(&Event::Text(StringEvent {
         name: "password".to_string(),
         value: password,
-    });
+    }));
 
-    emit(&Event {
+    emit(&Event::Text(StringEvent {
         name: "encrypted_seed".to_string(),
         value: format!(
             "[{}]",
@@ -276,7 +268,7 @@ fn process_creds(credentials: Credentials) {
                 .collect::<Vec<String>>()
                 .join(","),
         ),
-    });
+    }));
 }
 
 /// Helper fn which does `|e| Error::MultikeyError(&e.to_string())`

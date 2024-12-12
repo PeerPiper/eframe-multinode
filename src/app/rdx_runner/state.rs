@@ -14,8 +14,11 @@ use rdx::layer::{
     Inner,
 };
 use std::sync::Arc;
+use std::time::Duration;
 //use std::sync::Mutex;
 use tokio::sync::Mutex;
+
+use super::debouncer::Debouncer;
 
 /// Serializable [State] struct that holds the [Scope] and [egui::Context]
 #[derive(Debug, Clone, Default)]
@@ -31,6 +34,8 @@ pub struct State {
     peerpiper: Arc<Mutex<Option<PeerPiper>>>,
     /// String Store map the name of the plugin to the CID of the state
     cid_map: StringStore,
+    /// Canceller for deboucning saving state
+    cancel_save: Arc<Mutex<Option<tokio::sync::oneshot::Sender<()>>>>,
 }
 
 impl State {
@@ -59,26 +64,36 @@ impl State {
                 let peerpiper_clone = peerpiper.clone();
 
                 platform::spawn(async move {
-                    let binding = peerpiper_clone.lock().await;
-                    if let Some(ref mut peerpiper) = binding.as_ref() {
-                        let command = AllCommands::System(SystemCommand::Get { key: cid.into() });
-                        let pp = { peerpiper.order(command).await };
+                    let mut binding = peerpiper_clone.lock().await;
+                    loop {
+                        if let Some(peerpiper) = binding.as_ref() {
+                            let command =
+                                AllCommands::System(SystemCommand::Get { key: cid.into() });
+                            let pp = { peerpiper.order(command).await };
 
-                        let Ok(ReturnValues::Data(bytes)) = pp else {
-                            tracing::warn!("Failed to get state from CID: {}", key);
-                            tx.send(None).unwrap();
-                            return;
-                        };
+                            let Ok(ReturnValues::Data(bytes)) = pp else {
+                                tracing::warn!("Failed to get state from CID: {}", key);
+                                tx.send(None).unwrap();
+                                return;
+                            };
 
-                        let Ok(scope): Result<Scope, cbor4ii::serde::DecodeError<_>> =
-                            cbor4ii::serde::from_slice(&bytes)
-                        else {
-                            tracing::warn!("Failed to decode state scope from CID: {}", key);
-                            tx.send(None).unwrap();
-                            return;
-                        };
-                        tracing::info!("*** State loaded: {:?}", scope);
-                        tx.send(Some(scope)).unwrap();
+                            // bytes to string, lossy is fine here
+                            let str = String::from_utf8_lossy(&bytes);
+
+                            let Ok(scope) = serde_json::from_str(&str) else {
+                                tracing::warn!("Failed to decode state scope from CID: {}", key);
+                                tx.send(None).unwrap();
+                                return;
+                            };
+
+                            tracing::info!("*** State loaded: {:?}", scope);
+                            tx.send(Some(scope)).unwrap();
+                            break;
+                        } else {
+                            drop(binding);
+                            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            binding = peerpiper_clone.lock().await;
+                        }
                     }
                 });
 
@@ -95,52 +110,9 @@ impl State {
             name: name.clone().as_ref().to_string(),
             peerpiper,
             cid_map,
+            cancel_save: Arc::new(Mutex::new(None)),
         }
     }
-
-    // / // Not needed for native targets, they are very fast at opening PeerPiper.
-    // / Initialize the state with a scope from storage, if it exists.
-    // /// Same steps as in new(), but using self.* instead.
-    // pub fn init(&self) {
-    //    let mut scope = self.scope.clone();
-    //
-    //    if let Some(key) = self.cid_map.get_string(&self.name) {
-    //        if let Ok(cid) = Cid::try_from(key.clone()) {
-    //            let (tx, rx) = std::sync::mpsc::channel();
-    //
-    //            let peerpiper_clone = self.peerpiper.clone();
-    //
-    //            platform::spawn(async move {
-    //                let mut binding = peerpiper_clone.lock().await;
-    //                if let Some(ref mut peerpiper) = binding.as_mut() {
-    //                    let command = AllCommands::System(SystemCommand::Get { key: cid.into() });
-    //                    let pp = { peerpiper.order(command).await };
-    //
-    //                    let Ok(ReturnValues::Data(bytes)) = pp else {
-    //                        tracing::warn!("Failed to get state from CID: {}", key);
-    //                        tx.send(None).unwrap();
-    //                        return;
-    //                    };
-    //
-    //                    let Ok(scope): Result<Scope, cbor4ii::serde::DecodeError<_>> =
-    //                        cbor4ii::serde::from_slice(&bytes)
-    //                    else {
-    //                        tracing::warn!("Failed to decode state scope from CID: {}", key);
-    //                        tx.send(None).unwrap();
-    //                        return;
-    //                    };
-    //                    tracing::info!("*** State loaded: {:?}", scope);
-    //                    tx.send(Some(scope)).unwrap();
-    //                }
-    //            });
-    //
-    //            if let Some(sco) = rx.recv().unwrap() {
-    //                scope = sco;
-    //            }
-    //        }
-    //    }
-    //    tracing::info!("*** State loaded: {:?}", scope);
-    //}
 
     /// Persist the [rhai::Scope] state on disk
     ///
@@ -151,7 +123,10 @@ impl State {
         // Advantage of Option B is we can content address share plugin state scope.
         // Disadvantage is that we need to keep a mapping of plugin names to CIDs (a-la IPNS) when
         // data changes.
-        let bytes = cbor4ii::serde::to_vec(Vec::new(), &self.scope)?;
+
+        let str = serde_json::to_string_pretty(&self.scope)?;
+        let bytes = str.as_bytes().to_vec();
+
         // Save the serialized state to disk, independent of the platform
         // for this we can use peerpiper SystemCommandHanlder to put the bytes into the local system
         let mut binding = self.peerpiper.lock().await;
@@ -178,19 +153,6 @@ impl Inner for State {
     fn update(&mut self, key: &str, value: impl Into<Dynamic> + Copy) {
         self.scope.set_or_push(key, value.into());
 
-        let clone = self.clone();
-        platform::spawn(async move {
-            tracing::info!("Saving state");
-            match clone.save().await {
-                Ok(cid) => {
-                    tracing::info!("State saved to CID: {:?}", cid);
-                }
-                Err(e) => {
-                    tracing::error!("Error saving state: {:?}", e);
-                }
-            }
-        });
-
         if let Some(egui_ctx) = &self.egui_ctx {
             tracing::info!("Requesting repaint");
             egui_ctx.request_repaint();
@@ -198,6 +160,36 @@ impl Inner for State {
         } else {
             tracing::warn!("Egui context is not set");
         }
+
+        let state_clone = self.clone();
+        let callback = move || {
+            let state = state_clone.clone();
+            platform::spawn(async move {
+                tracing::info!("Saving state");
+                match state.save().await {
+                    Ok(cid) => {
+                        tracing::info!("State saved to CID: {:?}", cid);
+                    }
+                    Err(e) => {
+                        tracing::error!("Error saving state: {:?}", e);
+                    }
+                }
+            });
+        };
+
+        let cancel_token = self.cancel_save.clone();
+        let callback = Arc::new(callback);
+
+        let debouncer = Debouncer {
+            cancel_token,
+            callback,
+            delay: Duration::from_millis(400),
+        };
+
+        // spawn a debouncer.debounce().await; task
+        platform::spawn(async move {
+            debouncer.debounce().await;
+        });
     }
 
     fn scope(&self) -> ScopeRef {
@@ -216,46 +208,4 @@ impl Inner for State {
 
 // Example usage and tests
 #[cfg(test)]
-mod tests {
-
-    //use super::*;
-
-    // Deserializing rhai i64 / i32 i giving inconsistent test result locally versus in CI.
-    // TODO: fix this.
-    //
-    //#[test]
-    //fn test_state_scope_serialization() {
-    //    // Create a State with a Scope
-    //    let mut state = State::default();
-    //
-    //    // Add some values to the scope
-    //    state.scope.set_value("x", 42i64);
-    //    eprintln!("State: {:#?}", state);
-    //    state.scope.push_constant("name", "John");
-    //    state.scope.set_value("is_active", true);
-    //
-    //    // Serialize to JSON
-    //    let serialized = cbor4ii::serde::to_vec(Vec::new(), &state.scope).unwrap();
-    //    println!("Serialized: {:?}", serialized);
-    //
-    //    // Deserialize back to State
-    //    let deserialized_scope: Scope<'_> = cbor4ii::serde::from_slice(&serialized).unwrap();
-    //    eprintln!("Deserialized Values: {:#?}", deserialized_scope);
-    //
-    //    // Verify scope values
-    //    let val = deserialized_scope.get("x").unwrap();
-    //
-    //    eprintln!("Deserialized Value: {:?}", val);
-    //
-    //    let val = val.clone().try_cast::<i64>().unwrap();
-    //
-    //    assert_eq!(val, 42);
-    //
-    //    assert_eq!(
-    //        deserialized_scope.get_value::<String>("name").unwrap(),
-    //        "John"
-    //    );
-    //
-    //    assert!(deserialized_scope.get_value::<bool>("is_active").unwrap());
-    //}
-}
+mod tests {}

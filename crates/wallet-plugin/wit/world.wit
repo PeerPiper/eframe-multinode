@@ -1,41 +1,9 @@
 package component:plugin;
 
-interface types {
-  /// The Event type.
-  record event {
-    /// The variable name
-    name: string,
-    value: string
-  }
-
-  record key-args {
-    /// The key
-    key: string,
-    /// The codec
-    codec: string,
-    /// THreshold 
-    threshold: u8,
-    /// Limit 
-    limit: u8
-  }
-}
-
-interface host {
-  use types.{event, key-args};
-
-  /// emit an event.
-  emit: func(evt: event);
-
-  /// log a message.
-  log: func(msg: string);
-
-  /// get a random byte
-  random-byte: func() -> u8;
-}
-
 interface run {
 
-  use types.{event, key-args};
+  // from ./deps/host.wit
+  use host:component/types.{event, key-args};
 
   variant mk-error {
     /// The error message
@@ -77,10 +45,9 @@ interface run {
 /// An example world for the component to target.
 world plugin-world {
 
-  use types.{event};
-
   /// Import the event handler.
-  import host;
+  // from ./deps/host.wit
+  import host:component/host;
 
   export run;
   

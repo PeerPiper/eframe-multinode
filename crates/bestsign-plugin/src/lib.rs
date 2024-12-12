@@ -1,11 +1,12 @@
 #[allow(warnings)]
 mod bindings;
 
-use bestsign_core::{Base, Codec, EncodedVlad};
-use bindings::component::plugin::host::{
+use bestsign_core::Codec;
+use bindings::exports::component::plugin::run::Guest;
+use bindings::host::component::host::{
     emit, get_mk, log, prove, random_byte, Event, KeyArgs, ProveArgs,
 };
-use bindings::exports::component::plugin::run::Guest;
+use bindings::host::component::types::{StringEvent, StringListEvent};
 
 use bestsign_core::{
     ops::{
@@ -48,34 +49,45 @@ check_preimage("/hash")
 push("/entry/proof");
             "#;
 
-        emit(&Event {
+        emit(&Event::Text(StringEvent {
             name: "lock".to_string(),
             value: lock_str.to_string(),
-        });
+        }));
 
-        emit(&Event {
+        emit(&Event::Text(StringEvent {
             name: "unlock".to_string(),
             value: unlock_str.to_string(),
-        });
+        }));
 
         r#"
         // Get the public(multi)key from the wallet, if unlocked.
         let mk = getmk();
 
-        if !is_def_var("vlad") || type_of(mk) != "array" {
+        if !is_def_var("vlad") && type_of(mk) != "array" {
             render(`
                 <Vertical>
-                    <Text>{{lock}}</Text>
-                    <Text>{{unlock}}</Text>
-                    <Button on_click=create(lock, unlock)>Create Plog</Button>
-                    {{mk}}
+                    <Text>Unlock your wallet to see options</Text>
                 </Vertical>
             `)
         } else {
+    
+            // If "plog" is defined, display the details & CRUD ops
+            
             render(`
                 <Vertical>
-                    <Label>{{vlad}}</Label>
+                ${if !is_def_var("pretty_plog") {
+                    `
+                    <Text>{{lock}}</Text>
+                    <Text>{{unlock}}</Text>
+                    <Button on_click=create(lock, unlock)>Create Plog</Button>
+                    `
+                } else {
+                    `
                     <Label>pub multikey: ` + mk + `</Label>
+                    ` 
+                    + 
+                    pretty_plog.map(|p| `<Label>${p}</Label>`).reduce(|acc, s| acc + s, "")
+                }}
                 </Vertical>
             `)
         }
@@ -86,6 +98,10 @@ push("/entry/proof");
     fn create(lock: String, unlock: String) -> bool {
         create_plog(lock, unlock).is_ok()
     }
+
+    //fn update(lock: String, unlock: String) -> bool {
+    //    update_plog(lock, unlock).is_ok()
+    //}
 
     /// re-export get_mk so that rhai Script can call it
     fn getmk() -> Option<Vec<u8>> {
@@ -122,19 +138,67 @@ fn create_plog(lock: String, unlock: String) -> Result<Log, Error> {
 
     let mut key_manager = KeyManager::default();
 
-    let log = create(&config, &mut key_manager).map_err(|e| {
+    let plog = create(&config, &mut key_manager).map_err(|e| {
         log(&format!("Failed to create Plog: {:?}", e));
         Error::Plog
     })?;
 
-    let encoded = EncodedVlad::new(Base::Base36Lower, log.vlad.clone()).to_string();
+    // use to_value to skip the is_human_readable check, so we keep everything
+    let plog_value = serde_json::to_value(&plog).map_err(|e| {
+        log(&format!("Failed to serialize Log: {:?}", e));
+        Error::Plog
+    })?;
 
-    emit(&Event {
-        name: "vlad".to_string(),
-        value: encoded,
-    });
+    let plog_bytes = serde_json::to_string_pretty(&plog_value).map_err(|e| {
+        log(&format!("Failed to serialize Log to bytes: {:?}", e));
+        Error::Plog
+    })?;
 
-    Ok(log)
+    emit(&Event::Text(StringEvent {
+        name: "plog".to_string(),
+        value: plog_bytes,
+    }));
+
+    //let encoded = EncodedVlad::new(Base::Base36Lower, plog.vlad.clone()).to_string();
+
+    let display_data = bestsign_core::utils::get_display_data(&plog).map_err(|e| {
+        log(&format!("Failed to get display data: {:?}", e));
+        Error::Plog
+    })?;
+
+    if let bestsign_core::utils::DisplayData::ReturnValue { vlad, kvp_data, .. } = display_data {
+        let encoded = format!("Encoded Vlad: {}", vlad.encoded);
+
+        let pretty_kvp = kvp_data
+            .iter()
+            // filter: only show Multikey, tr, and Cid types of display data
+            .filter_map(|data| match data {
+                bestsign_core::utils::DisplayData::Multikey {
+                    key_path,
+                    fingerprint,
+                    ..
+                } => Some(format!(
+                    "Multikey: {} fingerprint: {}",
+                    key_path, fingerprint
+                )),
+                bestsign_core::utils::DisplayData::Cid {
+                    key_path, encoded, ..
+                } => Some(format!("Cid: {} {}", key_path, encoded)),
+                _ => None,
+            })
+            .collect::<Vec<String>>();
+
+        // concat encoded vlad and pretty_kvp vecs
+        let mut pretty_plog = vec![encoded];
+        pretty_plog.extend(pretty_kvp);
+
+        emit(&Event::StringList(StringListEvent {
+            name: "pretty_plog".to_string(),
+            value: pretty_plog,
+        }));
+    }
+
+    Ok(plog)
 }
 
 #[derive(Debug, Default, Clone)]

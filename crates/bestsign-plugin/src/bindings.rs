@@ -1,29 +1,88 @@
 #[allow(dead_code)]
-pub mod component {
+pub mod host {
     #[allow(dead_code)]
-    pub mod plugin {
+    pub mod component {
         #[allow(dead_code, clippy::all)]
         pub mod types {
             #[used]
             #[doc(hidden)]
             static __FORCE_SECTION_REF: fn() = super::super::super::__link_custom_section_describing_imports;
             use super::super::super::_rt;
-            /// The Event type.
+            /// Event type where value is a string.
             #[derive(Clone)]
-            pub struct Event {
+            pub struct StringEvent {
                 /// The variable name
                 pub name: _rt::String,
                 pub value: _rt::String,
+            }
+            impl ::core::fmt::Debug for StringEvent {
+                fn fmt(
+                    &self,
+                    f: &mut ::core::fmt::Formatter<'_>,
+                ) -> ::core::fmt::Result {
+                    f.debug_struct("StringEvent")
+                        .field("name", &self.name)
+                        .field("value", &self.value)
+                        .finish()
+                }
+            }
+            /// Event type where value is a list<u8>.
+            #[derive(Clone)]
+            pub struct BytesEvent {
+                /// The variable name
+                pub name: _rt::String,
+                pub value: _rt::Vec<u8>,
+            }
+            impl ::core::fmt::Debug for BytesEvent {
+                fn fmt(
+                    &self,
+                    f: &mut ::core::fmt::Formatter<'_>,
+                ) -> ::core::fmt::Result {
+                    f.debug_struct("BytesEvent")
+                        .field("name", &self.name)
+                        .field("value", &self.value)
+                        .finish()
+                }
+            }
+            /// Event wherte there is a list of strings
+            #[derive(Clone)]
+            pub struct StringListEvent {
+                /// The variable name
+                pub name: _rt::String,
+                pub value: _rt::Vec<_rt::String>,
+            }
+            impl ::core::fmt::Debug for StringListEvent {
+                fn fmt(
+                    &self,
+                    f: &mut ::core::fmt::Formatter<'_>,
+                ) -> ::core::fmt::Result {
+                    f.debug_struct("StringListEvent")
+                        .field("name", &self.name)
+                        .field("value", &self.value)
+                        .finish()
+                }
+            }
+            /// Event is a variant of string and bytes events.
+            #[derive(Clone)]
+            pub enum Event {
+                Text(StringEvent),
+                Bytes(BytesEvent),
+                StringList(StringListEvent),
             }
             impl ::core::fmt::Debug for Event {
                 fn fmt(
                     &self,
                     f: &mut ::core::fmt::Formatter<'_>,
                 ) -> ::core::fmt::Result {
-                    f.debug_struct("Event")
-                        .field("name", &self.name)
-                        .field("value", &self.value)
-                        .finish()
+                    match self {
+                        Event::Text(e) => f.debug_tuple("Event::Text").field(e).finish(),
+                        Event::Bytes(e) => {
+                            f.debug_tuple("Event::Bytes").field(e).finish()
+                        }
+                        Event::StringList(e) => {
+                            f.debug_tuple("Event::StringList").field(e).finish()
+                        }
+                    }
                 }
             }
             /// Key arguments for getting a Multikey
@@ -76,9 +135,9 @@ pub mod component {
             #[doc(hidden)]
             static __FORCE_SECTION_REF: fn() = super::super::super::__link_custom_section_describing_imports;
             use super::super::super::_rt;
-            pub type Event = super::super::super::component::plugin::types::Event;
-            pub type KeyArgs = super::super::super::component::plugin::types::KeyArgs;
-            pub type ProveArgs = super::super::super::component::plugin::types::ProveArgs;
+            pub type Event = super::super::super::host::component::types::Event;
+            pub type KeyArgs = super::super::super::host::component::types::KeyArgs;
+            pub type ProveArgs = super::super::super::host::component::types::ProveArgs;
             /// get-mk Error type
             #[derive(Clone)]
             pub enum MkError {
@@ -125,27 +184,100 @@ pub mod component {
             /// emit an event.
             pub fn emit(evt: &Event) {
                 unsafe {
-                    let super::super::super::component::plugin::types::Event {
-                        name: name0,
-                        value: value0,
-                    } = evt;
-                    let vec1 = name0;
-                    let ptr1 = vec1.as_ptr().cast::<u8>();
-                    let len1 = vec1.len();
-                    let vec2 = value0;
-                    let ptr2 = vec2.as_ptr().cast::<u8>();
-                    let len2 = vec2.len();
+                    let mut cleanup_list = _rt::Vec::new();
+                    use super::super::super::host::component::types::Event as V10;
+                    let (result11_0, result11_1, result11_2, result11_3, result11_4) = match evt {
+                        V10::Text(e) => {
+                            let super::super::super::host::component::types::StringEvent {
+                                name: name0,
+                                value: value0,
+                            } = e;
+                            let vec1 = name0;
+                            let ptr1 = vec1.as_ptr().cast::<u8>();
+                            let len1 = vec1.len();
+                            let vec2 = value0;
+                            let ptr2 = vec2.as_ptr().cast::<u8>();
+                            let len2 = vec2.len();
+                            (0i32, ptr1.cast_mut(), len1, ptr2.cast_mut(), len2)
+                        }
+                        V10::Bytes(e) => {
+                            let super::super::super::host::component::types::BytesEvent {
+                                name: name3,
+                                value: value3,
+                            } = e;
+                            let vec4 = name3;
+                            let ptr4 = vec4.as_ptr().cast::<u8>();
+                            let len4 = vec4.len();
+                            let vec5 = value3;
+                            let ptr5 = vec5.as_ptr().cast::<u8>();
+                            let len5 = vec5.len();
+                            (1i32, ptr4.cast_mut(), len4, ptr5.cast_mut(), len5)
+                        }
+                        V10::StringList(e) => {
+                            let super::super::super::host::component::types::StringListEvent {
+                                name: name6,
+                                value: value6,
+                            } = e;
+                            let vec7 = name6;
+                            let ptr7 = vec7.as_ptr().cast::<u8>();
+                            let len7 = vec7.len();
+                            let vec9 = value6;
+                            let len9 = vec9.len();
+                            let layout9 = _rt::alloc::Layout::from_size_align_unchecked(
+                                vec9.len() * 8,
+                                4,
+                            );
+                            let result9 = if layout9.size() != 0 {
+                                let ptr = _rt::alloc::alloc(layout9).cast::<u8>();
+                                if ptr.is_null() {
+                                    _rt::alloc::handle_alloc_error(layout9);
+                                }
+                                ptr
+                            } else {
+                                ::core::ptr::null_mut()
+                            };
+                            for (i, e) in vec9.into_iter().enumerate() {
+                                let base = result9.add(i * 8);
+                                {
+                                    let vec8 = e;
+                                    let ptr8 = vec8.as_ptr().cast::<u8>();
+                                    let len8 = vec8.len();
+                                    *base.add(4).cast::<usize>() = len8;
+                                    *base.add(0).cast::<*mut u8>() = ptr8.cast_mut();
+                                }
+                            }
+                            cleanup_list.extend_from_slice(&[(result9, layout9)]);
+                            (2i32, ptr7.cast_mut(), len7, result9, len9)
+                        }
+                    };
                     #[cfg(target_arch = "wasm32")]
-                    #[link(wasm_import_module = "component:plugin/host")]
+                    #[link(wasm_import_module = "host:component/host")]
                     extern "C" {
                         #[link_name = "emit"]
-                        fn wit_import(_: *mut u8, _: usize, _: *mut u8, _: usize);
+                        fn wit_import(
+                            _: i32,
+                            _: *mut u8,
+                            _: usize,
+                            _: *mut u8,
+                            _: usize,
+                        );
                     }
                     #[cfg(not(target_arch = "wasm32"))]
-                    fn wit_import(_: *mut u8, _: usize, _: *mut u8, _: usize) {
+                    fn wit_import(_: i32, _: *mut u8, _: usize, _: *mut u8, _: usize) {
                         unreachable!()
                     }
-                    wit_import(ptr1.cast_mut(), len1, ptr2.cast_mut(), len2);
+                    wit_import(
+                        result11_0,
+                        result11_1,
+                        result11_2,
+                        result11_3,
+                        result11_4,
+                    );
+                    for (ptr, layout) in cleanup_list {
+                        if layout.size() != 0 {
+                            _rt::alloc::dealloc(ptr.cast(), layout);
+                        }
+                    }
                 }
             }
             #[allow(unused_unsafe, clippy::all)]
@@ -156,7 +288,7 @@ pub mod component {
                     let ptr0 = vec0.as_ptr().cast::<u8>();
                     let len0 = vec0.len();
                     #[cfg(target_arch = "wasm32")]
-                    #[link(wasm_import_module = "component:plugin/host")]
+                    #[link(wasm_import_module = "host:component/host")]
                     extern "C" {
                         #[link_name = "log"]
                         fn wit_import(_: *mut u8, _: usize);
@@ -173,7 +305,7 @@ pub mod component {
             pub fn random_byte() -> u8 {
                 unsafe {
                     #[cfg(target_arch = "wasm32")]
-                    #[link(wasm_import_module = "component:plugin/host")]
+                    #[link(wasm_import_module = "host:component/host")]
                     extern "C" {
                         #[link_name = "random-byte"]
                         fn wit_import() -> i32;
@@ -193,7 +325,7 @@ pub mod component {
                     #[repr(align(4))]
                     struct RetArea([::core::mem::MaybeUninit<u8>; 16]);
                     let mut ret_area = RetArea([::core::mem::MaybeUninit::uninit(); 16]);
-                    let super::super::super::component::plugin::types::KeyArgs {
+                    let super::super::super::host::component::types::KeyArgs {
                         key: key0,
                         codec: codec0,
                         threshold: threshold0,
@@ -207,7 +339,7 @@ pub mod component {
                     let len2 = vec2.len();
                     let ptr3 = ret_area.0.as_mut_ptr().cast::<u8>();
                     #[cfg(target_arch = "wasm32")]
-                    #[link(wasm_import_module = "component:plugin/host")]
+                    #[link(wasm_import_module = "host:component/host")]
                     extern "C" {
                         #[link_name = "get-mk"]
                         fn wit_import(
@@ -316,7 +448,7 @@ pub mod component {
                     #[repr(align(4))]
                     struct RetArea([::core::mem::MaybeUninit<u8>; 16]);
                     let mut ret_area = RetArea([::core::mem::MaybeUninit::uninit(); 16]);
-                    let super::super::super::component::plugin::types::ProveArgs {
+                    let super::super::super::host::component::types::ProveArgs {
                         mk: mk0,
                         data: data0,
                     } = args;
@@ -328,7 +460,7 @@ pub mod component {
                     let len2 = vec2.len();
                     let ptr3 = ret_area.0.as_mut_ptr().cast::<u8>();
                     #[cfg(target_arch = "wasm32")]
-                    #[link(wasm_import_module = "component:plugin/host")]
+                    #[link(wasm_import_module = "host:component/host")]
                     extern "C" {
                         #[link_name = "prove"]
                         fn wit_import(
@@ -514,6 +646,8 @@ pub mod exports {
                     }
                 }
                 pub trait Guest {
+                    /// from ./deps/host.wit
+                    /// use host:component/types.{event, key-args};
                     /// loads just the XML like markdown
                     fn load() -> _rt::String;
                     /// Creates a data provenance log, returns the serialized log.
@@ -556,6 +690,7 @@ pub mod exports {
 mod _rt {
     pub use alloc_crate::string::String;
     pub use alloc_crate::vec::Vec;
+    pub use alloc_crate::alloc;
     pub fn as_i32<T: AsI32>(t: T) -> i32 {
         t.as_i32()
     }
@@ -641,7 +776,6 @@ mod _rt {
         alloc::dealloc(ptr, layout);
     }
     extern crate alloc as alloc_crate;
-    pub use alloc_crate::alloc;
 }
 /// Generates `#[no_mangle]` functions to export the specified type as the
 /// root implementation of all generated traits.
@@ -676,27 +810,27 @@ pub(crate) use __export_plugin_world_impl as export;
 #[cfg(target_arch = "wasm32")]
 #[link_section = "component-type:wit-bindgen:0.35.0:component:plugin:plugin-world:encoded world"]
 #[doc(hidden)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 816] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xad\x05\x01A\x02\x01\
-A\x0c\x01B\x07\x01r\x02\x04names\x05values\x04\0\x05event\x03\0\0\x01r\x04\x03ke\
-ys\x05codecs\x09threshold}\x05limit}\x04\0\x08key-args\x03\0\x02\x01p}\x01r\x02\x02\
-mk\x04\x04data\x04\x04\0\x0aprove-args\x03\0\x05\x03\0\x16component:plugin/types\
-\x05\0\x02\x03\0\0\x05event\x03\0\x05event\x03\0\x01\x02\x03\0\0\x08key-args\x02\
-\x03\0\0\x0aprove-args\x01B\x14\x02\x03\x02\x01\x01\x04\0\x05event\x03\0\0\x02\x03\
-\x02\x01\x03\x04\0\x08key-args\x03\0\x02\x02\x03\x02\x01\x04\x04\0\x0aprove-args\
-\x03\0\x04\x01q\x04\x0dinvalid-codec\x01s\0\x14wallet-uninitialized\0\0\x0emulti\
-key-error\x01s\0\x0dkey-not-found\x01s\0\x04\0\x08mk-error\x03\0\x06\x01@\x01\x03\
-evt\x01\x01\0\x04\0\x04emit\x01\x08\x01@\x01\x03msgs\x01\0\x04\0\x03log\x01\x09\x01\
-@\0\0}\x04\0\x0brandom-byte\x01\x0a\x01p}\x01j\x01\x0b\x01\x07\x01@\x01\x04args\x03\
-\0\x0c\x04\0\x06get-mk\x01\x0d\x01@\x01\x04args\x05\0\x0c\x04\0\x05prove\x01\x0e\
-\x03\0\x15component:plugin/host\x05\x05\x02\x03\0\x01\x08mk-error\x02\x03\0\x01\x08\
-key-args\x01B\x0e\x02\x03\x02\x01\x01\x04\0\x05event\x03\0\0\x02\x03\x02\x01\x06\
-\x04\0\x08mk-error\x03\0\x02\x02\x03\x02\x01\x07\x04\0\x08key-args\x03\0\x04\x01\
-@\0\0s\x04\0\x04load\x01\x06\x01@\x02\x04locks\x06unlocks\0\x7f\x04\0\x06create\x01\
-\x07\x01p}\x01k\x08\x01@\0\0\x09\x04\0\x05getmk\x01\x0a\x04\0\x14component:plugi\
-n/run\x05\x08\x04\0\x1dcomponent:plugin/plugin-world\x04\0\x0b\x12\x01\0\x0cplug\
-in-world\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.2\
-20.0\x10wit-bindgen-rust\x060.35.0";
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 849] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xce\x05\x01A\x02\x01\
+A\x09\x01B\x0e\x01r\x02\x04names\x05values\x04\0\x0cstring-event\x03\0\0\x01p}\x01\
+r\x02\x04names\x05value\x02\x04\0\x0bbytes-event\x03\0\x03\x01ps\x01r\x02\x04nam\
+es\x05value\x05\x04\0\x11string-list-event\x03\0\x06\x01q\x03\x04text\x01\x01\0\x05\
+bytes\x01\x04\0\x0bstring-list\x01\x07\0\x04\0\x05event\x03\0\x08\x01r\x04\x03ke\
+ys\x05codecs\x09threshold}\x05limit}\x04\0\x08key-args\x03\0\x0a\x01r\x02\x02mk\x02\
+\x04data\x02\x04\0\x0aprove-args\x03\0\x0c\x03\0\x14host:component/types\x05\0\x02\
+\x03\0\0\x05event\x02\x03\0\0\x08key-args\x02\x03\0\0\x0aprove-args\x01B\x14\x02\
+\x03\x02\x01\x01\x04\0\x05event\x03\0\0\x02\x03\x02\x01\x02\x04\0\x08key-args\x03\
+\0\x02\x02\x03\x02\x01\x03\x04\0\x0aprove-args\x03\0\x04\x01q\x04\x0dinvalid-cod\
+ec\x01s\0\x14wallet-uninitialized\0\0\x0emultikey-error\x01s\0\x0dkey-not-found\x01\
+s\0\x04\0\x08mk-error\x03\0\x06\x01@\x01\x03evt\x01\x01\0\x04\0\x04emit\x01\x08\x01\
+@\x01\x03msgs\x01\0\x04\0\x03log\x01\x09\x01@\0\0}\x04\0\x0brandom-byte\x01\x0a\x01\
+p}\x01j\x01\x0b\x01\x07\x01@\x01\x04args\x03\0\x0c\x04\0\x06get-mk\x01\x0d\x01@\x01\
+\x04args\x05\0\x0c\x04\0\x05prove\x01\x0e\x03\0\x13host:component/host\x05\x04\x01\
+B\x08\x01@\0\0s\x04\0\x04load\x01\0\x01@\x02\x04locks\x06unlocks\0\x7f\x04\0\x06\
+create\x01\x01\x01p}\x01k\x02\x01@\0\0\x03\x04\0\x05getmk\x01\x04\x04\0\x14compo\
+nent:plugin/run\x05\x05\x04\0\x1dcomponent:plugin/plugin-world\x04\0\x0b\x12\x01\
+\0\x0cplugin-world\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-compon\
+ent\x070.220.0\x10wit-bindgen-rust\x060.35.0";
 #[inline(never)]
 #[doc(hidden)]
 pub fn __link_custom_section_describing_imports() {

@@ -61,50 +61,6 @@ impl State {
 
         let cid_map = StringStore::new();
 
-        // Load the CID of the state from the platform storage
-        // filesystem, localstorage, etc.
-        // and load the state from the CID
-        // and set the scope to the loaded state
-        // if the CID is not found, create a new scope
-        // and set the scope to the new scope
-        //
-        // Technically it's possible that the PeerPiper is not set yet, so we need to handle THAT
-        // case as well, but it also seems to always be ready by the time we get here.
-        //let scope_clone = scope.clone();
-        //if let Some(key) = cid_map.get_string(name.as_ref()) {
-        //    if let Ok(cid) = Cid::try_from(key.clone()) {
-        //        let peerpiper_clone = peerpiper.clone();
-        //
-        //        platform::spawn(async move {
-        //            let pp = {
-        //                log::info!("Borrow mut in new");
-        //                let mut binding = peerpiper_clone.borrow_mut();
-        //                let Some(ref mut peerpiper) = binding.as_mut() else {
-        //                    log::warn!("INIT: Commander is not set yet");
-        //                    return;
-        //                };
-        //                let command = AllCommands::System(SystemCommand::Get { key: cid.into() });
-        //                peerpiper.order(command).await
-        //            };
-        //
-        //            let Ok(ReturnValues::Data(bytes)) = pp else {
-        //                log::warn!("Failed to get state from CID: {}", key);
-        //                return;
-        //            };
-        //
-        //            let Ok(scope): Result<Scope, cbor4ii::serde::DecodeError<_>> =
-        //                cbor4ii::serde::from_slice(&bytes)
-        //            else {
-        //                log::warn!("Failed to decode state scope from CID: {}", key);
-        //                return;
-        //            };
-        //
-        //            *scope_clone.borrow_mut() = scope;
-        //            log::info!("*** State loaded from PeerPiper: {:?}", scope_clone);
-        //        });
-        //    }
-        //}
-
         Self {
             inner: SendWrapper::new(InnerState {
                 scope,
@@ -143,10 +99,10 @@ impl State {
                         return;
                     };
 
-                    let Ok(scope): Result<Scope, cbor4ii::serde::DecodeError<_>> =
-                        cbor4ii::serde::from_slice(&bytes)
-                    else {
-                        log::warn!("Failed to decode state scope from CID: {}", key);
+                    let str = String::from_utf8_lossy(&bytes);
+
+                    let Ok(scope) = serde_json::from_str(&str) else {
+                        tracing::warn!("Failed to decode state scope from CID: {}", key);
                         return;
                     };
 
@@ -166,7 +122,9 @@ impl State {
         // Advantage of Option B is we can content address share plugin state scope.
         // Disadvantage is that we need to keep a mapping of plugin names to CIDs (a-la IPNS) when
         // data changes.
-        let bytes = cbor4ii::serde::to_vec(Vec::new(), &self.inner.scope)?;
+        let str = serde_json::to_string_pretty(&self.inner.scope.borrow().clone())?;
+        let bytes = str.as_bytes().to_vec();
+
         // Save the serialized state to disk, independent of the platform
         // for this we can use peerpiper SystemCommandHanlder to put the bytes into the local system
         log::info!("borrow_mut in state.save()");
@@ -244,37 +202,4 @@ impl Inner for State {
 
 // Example usage and tests
 #[cfg(test)]
-mod tests {
-
-    use super::*;
-
-    #[test]
-    fn test_state_scope_serialization() {
-        // Create a State with a Scope
-        let mut state = State::default();
-
-        // Add some values to the scope
-        let x = 42i64;
-        state.scope.set_value("x", x);
-        state.scope.push_constant("name", "John");
-        state.scope.set_value("is_active", true);
-
-        // Serialize to JSON
-        let serialized = cbor4ii::serde::to_vec(Vec::new(), &state.scope).unwrap();
-        println!("Serialized: {:?}", serialized);
-
-        // Deserialize back to State
-        let deserialized_scope: Scope<'_> = cbor4ii::serde::from_slice(&serialized).unwrap();
-        eprintln!("Deserialized: {:#?}", deserialized_scope);
-
-        // Verify scope values
-        assert_eq!(deserialized_scope.get_value::<i64>("x").unwrap(), x);
-
-        assert_eq!(
-            deserialized_scope.get_value::<String>("name").unwrap(),
-            "John"
-        );
-
-        assert!(deserialized_scope.get_value::<bool>("is_active").unwrap());
-    }
-}
+mod tests {}

@@ -1,6 +1,9 @@
 //! The RdxApp struct is the main struct that holds all the plugins and their state.
 #![allow(clippy::arc_with_non_send_sync)]
 
+#[cfg(not(target_arch = "wasm32"))]
+mod debouncer; // debouncer for tokio only
+
 mod layer;
 
 use layer::LayerPlugin;
@@ -101,6 +104,7 @@ impl RdxRunner {
             wallet_bytes,
             State::new(wallet_name.to_string(), ctx.clone(), peerpiper.clone()),
             None,
+            None,
         );
         let rdx_source = wallet_layer.call("load", &[]).unwrap();
         let Some(Value::String(rdx_source)) = rdx_source else {
@@ -169,6 +173,7 @@ impl RdxRunner {
                 wasm_bytes,
                 State::new(name.to_string(), ctx.clone(), peerpiper.clone()),
                 Some(arc_wallet.clone()),
+                Some(peerpiper.clone()),
             );
             let rdx_source = plugin.call("load", &[]).unwrap();
             let Some(Value::String(rdx_source)) = rdx_source else {
