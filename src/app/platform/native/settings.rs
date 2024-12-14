@@ -75,7 +75,8 @@ impl Settings {
                         ));
                         ui.add(
                             egui::TextEdit::singleline(&mut self.cloudflare.cf_api_token)
-                                .desired_width(f32::INFINITY),
+                                .desired_width(f32::INFINITY)
+                                .password(true),
                         );
                         ui.end_row();
 

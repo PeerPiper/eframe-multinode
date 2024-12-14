@@ -1,7 +1,6 @@
 //! Custom State for the RDX Plugins, Implements [rdx::layer::Inner] and custom Serialize/Deserialize
 //! so that the [rdx::layer::rhai::Scope] can be serialized and deserialized.
 use crate::app::platform;
-use crate::app::platform::peerpiper::PeerPiper;
 use crate::app::platform::StringStore;
 use peerpiper::core::events::AllCommands;
 use peerpiper::core::events::SystemCommand;
@@ -19,6 +18,7 @@ use std::time::Duration;
 use tokio::sync::Mutex;
 
 use super::debouncer::Debouncer;
+use super::CommanderCounter;
 
 /// Serializable [State] struct that holds the [Scope] and [egui::Context]
 #[derive(Debug, Clone, Default)]
@@ -31,7 +31,7 @@ pub struct State {
     /// The [egui::Context] that holds the UI state. Used to request repaints
     egui_ctx: Option<egui::Context>,
     /// Handler to PeerPiper SystemCommander
-    peerpiper: Arc<Mutex<Option<PeerPiper>>>,
+    commander: CommanderCounter,
     /// String Store map the name of the plugin to the CID of the state
     cid_map: StringStore,
     /// Canceller for deboucning saving state
@@ -42,7 +42,7 @@ impl State {
     pub fn new(
         name: impl AsRef<str> + Clone,
         ctx: Option<egui::Context>,
-        peerpiper: Arc<Mutex<Option<PeerPiper>>>,
+        commander: CommanderCounter,
     ) -> Self {
         let mut scope = Scope::new();
 
@@ -61,15 +61,15 @@ impl State {
             if let Ok(cid) = Cid::try_from(key.clone()) {
                 let (tx, rx) = std::sync::mpsc::channel();
 
-                let peerpiper_clone = peerpiper.clone();
+                let commander_clone = commander.clone();
 
                 platform::spawn(async move {
-                    let mut binding = peerpiper_clone.lock().await;
+                    let mut binding = commander_clone.lock().await;
                     loop {
-                        if let Some(peerpiper) = binding.as_ref() {
+                        if let Some(commander) = binding.as_ref() {
                             let command =
                                 AllCommands::System(SystemCommand::Get { key: cid.into() });
-                            let pp = { peerpiper.order(command).await };
+                            let pp = { commander.order(command).await };
 
                             let Ok(ReturnValues::Data(bytes)) = pp else {
                                 tracing::warn!("Failed to get state from CID: {}", key);
@@ -92,7 +92,7 @@ impl State {
                         } else {
                             drop(binding);
                             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                            binding = peerpiper_clone.lock().await;
+                            binding = commander_clone.lock().await;
                         }
                     }
                 });
@@ -108,7 +108,7 @@ impl State {
             scope,
             egui_ctx: ctx,
             name: name.clone().as_ref().to_string(),
-            peerpiper,
+            commander,
             cid_map,
             cancel_save: Arc::new(Mutex::new(None)),
         }
@@ -128,8 +128,8 @@ impl State {
         let bytes = str.as_bytes().to_vec();
 
         // Save the serialized state to disk, independent of the platform
-        // for this we can use peerpiper SystemCommandHanlder to put the bytes into the local system
-        let mut binding = self.peerpiper.lock().await;
+        // for this we can use commander SystemCommandHanlder to put the bytes into the local system
+        let mut binding = self.commander.lock().await;
         let Some(cmdr) = binding.as_mut() else {
             tracing::warn!("Commander is not set yet");
             return Err(anyhow::anyhow!("Commander is not set yet"))?;

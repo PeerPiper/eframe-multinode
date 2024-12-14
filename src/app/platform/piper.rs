@@ -14,7 +14,8 @@ use futures::{
 };
 pub use peerpiper::core::events::AllCommands;
 use peerpiper::core::events::PublicEvent;
-use peerpiper::core::{Commander, ReturnValues};
+pub use peerpiper::core::Commander;
+pub use peerpiper::core::ReturnValues;
 
 #[derive(Debug, Clone)]
 pub struct PeerPiper {
@@ -55,19 +56,24 @@ impl PeerPiper {
 
         // command_sender will be used by other wasm_bindgen functions to send commands to the network
         // so we will need to wrap it in a Mutex or something to make it thread safe.
-        let (command_sender, command_receiver) = tokio::sync::mpsc::channel(8);
+        let (network_command_sender, network_command_receiver) = tokio::sync::mpsc::channel(8);
 
         platform::spawn(async move {
-            peerpiper::start(tx_evts, command_receiver, tx_client, libp2p_endpoints)
-                .await
-                .expect("never end")
+            peerpiper::start(
+                tx_evts,
+                network_command_receiver,
+                tx_client,
+                libp2p_endpoints,
+            )
+            .await
+            .expect("never end")
         });
 
         // wait on rx_client to get the client handle
         let client_handle = rx_client.await?;
 
         self.commander
-            .with_network(command_sender)
+            .with_network(network_command_sender)
             .with_client(client_handle);
 
         while let Some(event) = rx_evts.next().await {

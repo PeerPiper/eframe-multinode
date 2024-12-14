@@ -4,7 +4,6 @@
 //! to a remote node, which is handled in the `web` module.
 mod cloudflare;
 mod error;
-pub mod peerpiper;
 mod settings;
 mod storage;
 
@@ -17,6 +16,8 @@ use multiaddr::Multiaddr;
 use peerpiper_plugins::tokio::{ExternalEvents, PluggableClient, PluggablePiper};
 use std::future::Future;
 use std::sync::{Arc, Mutex};
+
+use crate::app::rdx_runner::RdxRunner;
 
 // use peerpiper_plugins::{PluggablePiper};
 
@@ -52,15 +53,32 @@ impl ContextSet {
 }
 
 #[derive(Clone)]
+pub(crate) struct Loader(PluggableClient);
+
+impl Loader {
+    /// Load a plugin into the Platform
+    pub fn load_plugin(&self, name: String, wasm: Vec<u8>) {
+        // call self.loader.load_plugin(name, wasm).await from this sync function using tokio
+        let mut loader = self.0.clone();
+        tokio::task::spawn(async move {
+            if let Err(e) = loader.load_plugin(name, &wasm).await {
+                tracing::error!("Failed to load plugin: {:?}", e);
+            }
+        });
+    }
+}
+
 pub(crate) struct Platform {
     log: Arc<Mutex<Vec<String>>>,
 
     /// Clone of the [egui::Context] so that the platform can trigger repaints
     ctx: Arc<Mutex<ContextSet>>,
 
-    pluggable_client: PluggableClient,
+    pub loader: Loader,
 
     addr: Arc<Mutex<Option<Multiaddr>>>,
+
+    pub rdx_runner: RdxRunner,
 }
 
 impl Default for Platform {
@@ -81,14 +99,27 @@ impl Default for Platform {
             while let Some(event) = plugin_evts.recv().await {
                 let msg = format!("{:?}", event);
                 tracing::debug!("Received event: {:?}", msg);
-                log_clone.lock().unwrap().push(msg);
-                ctx_clone.lock().unwrap().request_repaint();
 
-                if let ExternalEvents::Address(addr) = event {
-                    tracing::debug!("Received Node Address: {:?}", addr);
-                    let mut lock = addr_clone.lock().unwrap();
-                    *lock = Some(addr);
+                let timestamp = chrono::Local::now().format("%H:%M:%S%.3f");
+
+                match event {
+                    ExternalEvents::Address(addr) => {
+                        tracing::debug!("Node Address: {}", &addr.to_string());
+                        let mut lock = addr_clone.lock().unwrap();
+                        *lock = Some(addr);
+                        log_clone.lock().unwrap().push(msg);
+                    }
+                    ExternalEvents::Message(msg) => {
+                        tracing::debug!("Received Message: {:?}", msg);
+                        log_clone.lock().unwrap().push(msg);
+                    }
+                    ExternalEvents::Pong { peer, rtt } => {
+                        let msg = format!("[{}] 🏓 Pong {}ms from {}", timestamp, rtt, peer);
+                        log_clone.lock().unwrap().push(msg);
+                    }
                 }
+
+                ctx_clone.lock().unwrap().request_repaint();
             }
         });
 
@@ -99,11 +130,16 @@ impl Default for Platform {
             });
         });
 
+        let commander_clone = pluggable_client.commander.clone();
+
+        let rdx_runner = RdxRunner::new(commander_clone, None);
+
         Self {
             log,
             ctx,
-            pluggable_client,
+            loader: Loader(pluggable_client),
             addr,
+            rdx_runner,
         }
     }
 }
@@ -116,16 +152,16 @@ impl Drop for Platform {
 }
 
 impl Platform {
-    /// Load a plugin into the Platform
-    pub fn load_plugin(&self, name: String, wasm: Vec<u8>) {
-        // call self.loader.load_plugin(name, wasm).await from this sync function using tokio
-        let mut loader = self.pluggable_client.clone();
-        tokio::task::spawn(async move {
-            if let Err(e) = loader.load_plugin(name, &wasm).await {
-                tracing::error!("Failed to load plugin: {:?}", e);
-            }
-        });
-    }
+    ///// Load a plugin into the Platform
+    //pub fn load_plugin(&self, name: String, wasm: Vec<u8>) {
+    //    // call self.loader.load_plugin(name, wasm).await from this sync function using tokio
+    //    let mut loader = self.loader.clone();
+    //    tokio::task::spawn(async move {
+    //        if let Err(e) = loader.load_plugin(name, &wasm).await {
+    //            tracing::error!("Failed to load plugin: {:?}", e);
+    //        }
+    //    });
+    //}
 
     /// Returns whether the ctx is set or not
     pub(crate) fn egui_ctx(&self) -> bool {

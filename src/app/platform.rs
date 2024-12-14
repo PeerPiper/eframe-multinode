@@ -24,7 +24,6 @@ pub(crate) use platform::{spawn, Platform, Settings};
 //fn put(&self, bytes: Vec<u8>) -> Cid;
 //}
 
-pub mod peerpiper;
+pub mod piper;
 
-pub use platform::peerpiper::create_peerpiper;
 pub use platform::StringStore;

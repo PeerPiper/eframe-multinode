@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 
 use super::web_error::WebError as Error;
-use crate::app::platform::peerpiper::PeerPiper;
+use crate::app::platform::piper::PeerPiper;
 use crate::app::Cid;
 use peerpiper_browser::opfs::OPFSBlockstore;
 use send_wrapper::SendWrapper;

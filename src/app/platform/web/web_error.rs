@@ -22,4 +22,7 @@ pub enum WebError {
     /// from peerpiper_browser::error::Error
     #[error("PeerPiper Browser Error: {0}")]
     PeerPiperBrowserError(#[from] peerpiper_browser::Error),
+    ///// CommanderNotReady
+    //#[error("Commander not ready. You might be trying to send commands before it is ready.")]
+    //CommanderNotReady,
 }

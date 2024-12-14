@@ -6,35 +6,33 @@ mod debouncer; // debouncer for tokio only
 
 mod layer;
 
+use crate::app::platform::platform::Blockstore;
 use layer::LayerPlugin;
+use peerpiper::core::Commander;
 use rdx::{
     layer::{rhai::Dynamic, Instantiator, Value},
     PluginDeets,
 };
+use std::{collections::HashMap, sync::Arc};
+use std::{ops::Deref, sync::Mutex};
 
 #[cfg(not(target_arch = "wasm32"))]
 mod state;
-
 #[cfg(not(target_arch = "wasm32"))]
 use state::State;
-
-#[cfg(target_arch = "wasm32")]
-mod web;
-
-#[cfg(target_arch = "wasm32")]
-use web::state::State;
-
-use crate::app::platform::{self, create_peerpiper};
-
-use std::{collections::HashMap, sync::Arc};
-use std::{ops::Deref, sync::Mutex};
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::Mutex as AsyncMutex;
 
 #[cfg(target_arch = "wasm32")]
+mod web;
+#[cfg(target_arch = "wasm32")]
+use crate::app::platform;
+#[cfg(target_arch = "wasm32")]
 use std::cell::RefCell;
 #[cfg(target_arch = "wasm32")]
 use std::rc::Rc;
+#[cfg(target_arch = "wasm32")]
+use web::state::State;
 
 /// The RdxRunner struct is the main struct that holds all the plugins and their state.
 pub struct RdxRunner {
@@ -44,15 +42,17 @@ pub struct RdxRunner {
     pub(crate) plugins: HashMap<String, PluginDeets<State>>,
 }
 
-impl Default for RdxRunner {
-    fn default() -> Self {
-        tracing::warn!("No context provided, creating empty RdxRunner");
-        Self::new(None)
-    }
-}
+#[cfg(not(target_arch = "wasm32"))]
+type CommanderCounter = Arc<AsyncMutex<Option<Commander<Blockstore>>>>;
+#[cfg(target_arch = "wasm32")]
+type CommanderCounter = Rc<RefCell<Option<Commander<Blockstore>>>>;
 
 impl RdxRunner {
-    pub fn new(ctx: Option<egui::Context>) -> Self {
+    pub fn new(
+        commander: CommanderCounter,
+        ctx: Option<egui::Context>,
+        #[cfg(target_arch = "wasm32")] receiver: futures::channel::oneshot::Receiver<()>,
+    ) -> Self {
         let mut plugins = HashMap::new();
 
         // the wallet_plugin needs to be separate from the other plugins
@@ -70,28 +70,29 @@ impl RdxRunner {
             .map(|i| builtins.remove(i))
             .unwrap();
 
-        #[cfg(not(target_arch = "wasm32"))]
-        let peerpiper = Arc::new(AsyncMutex::new(None));
-        #[cfg(target_arch = "wasm32")]
-        let peerpiper = Rc::new(RefCell::new(None));
-
-        let peerpiper_clone = peerpiper.clone();
-        #[cfg(target_arch = "wasm32")]
-        let (sender, receiver) = futures::channel::oneshot::channel::<()>();
-
-        platform::spawn(async move {
-            let peerpiper = create_peerpiper().await.unwrap_or_else(|e| {
-                panic!("Failed to create PeerPiper: {:?}", e);
-            });
-            #[cfg(not(target_arch = "wasm32"))]
-            peerpiper_clone.lock().await.replace(peerpiper);
-            #[cfg(target_arch = "wasm32")]
-            peerpiper_clone.borrow_mut().replace(peerpiper);
-
-            log::info!("PeerPiper created");
-            #[cfg(target_arch = "wasm32")]
-            sender.send(()).unwrap();
-        });
+        //#[cfg(not(target_arch = "wasm32"))]
+        //let peerpiper = Arc::new(AsyncMutex::new(None));
+        //#[cfg(target_arch = "wasm32")]
+        //let peerpiper = Rc::new(RefCell::new(None));
+        //
+        //let peerpiper_clone = peerpiper.clone();
+        //#[cfg(target_arch = "wasm32")]
+        //let (sender, receiver) = futures::channel::oneshot::channel::<()>();
+        //
+        //platform::spawn(async move {
+        //    let peerpiper = PeerPiper::new(commander);
+        //    //let peerpiper = create_peerpiper().await.unwrap_or_else(|e| {
+        //    //    panic!("Failed to create PeerPiper: {:?}", e);
+        //    //});
+        //    #[cfg(not(target_arch = "wasm32"))]
+        //    peerpiper_clone.lock().await.replace(peerpiper);
+        //    #[cfg(target_arch = "wasm32")]
+        //    peerpiper_clone.borrow_mut().replace(peerpiper);
+        //
+        //    log::info!("PeerPiper created");
+        //    #[cfg(target_arch = "wasm32")]
+        //    sender.send(()).unwrap();
+        //});
 
         // Since the browser is so much slower than native,
         // We need to gather up the arc_wallet and all the arc_plugins
@@ -102,7 +103,7 @@ impl RdxRunner {
         // Instantiate the wallet_plugin
         let mut wallet_layer = LayerPlugin::new(
             wallet_bytes,
-            State::new(wallet_name.to_string(), ctx.clone(), peerpiper.clone()),
+            State::new(wallet_name.to_string(), ctx.clone(), commander.clone()),
             None,
             None,
         );
@@ -171,9 +172,9 @@ impl RdxRunner {
             log::info!("Loading plugin: {:?}", name);
             let mut plugin = LayerPlugin::new(
                 wasm_bytes,
-                State::new(name.to_string(), ctx.clone(), peerpiper.clone()),
+                State::new(name.to_string(), ctx.clone(), commander.clone()),
                 Some(arc_wallet.clone()),
-                Some(peerpiper.clone()),
+                Some(commander.clone()),
             );
             let rdx_source = plugin.call("load", &[]).unwrap();
             let Some(Value::String(rdx_source)) = rdx_source else {
@@ -201,19 +202,19 @@ impl RdxRunner {
         }
 
         // clone the arc_collection, pass it into the spawned task,
-        // wait for the peerpiper receiver to be ready, then iterate over the arc_collection
+        // wait for the commander receiver to be ready, then iterate over the arc_collection
         // then call state.init() on each plugin: layer_plugin.store().data()
 
         #[cfg(target_arch = "wasm32")]
         let arc_collection_clone = arc_collection.clone();
 
         // We only do this for the wasm32 target because the tokio is fast enough to not need it.
-        // The browser on the other hand is slow and needs to wait for the PeerPiper to be ready.
+        // The browser on the other hand is slow and needs to wait for the commander to be ready.
         #[cfg(target_arch = "wasm32")]
         platform::spawn(async move {
-            tracing::info!("Waiting for PeerPiper to be ready");
+            tracing::info!("Waiting for commander to be ready");
             receiver.await.unwrap();
-            tracing::info!("PeerPiper is ready");
+            tracing::info!("commander is ready");
             let lock = arc_collection_clone.lock().unwrap();
             for (name, arc_plugin) in lock.iter() {
                 tracing::info!("Initializing plugin: {:?}", name);

@@ -23,9 +23,6 @@ pub struct MultinodeApp {
 
     file_dialog: file_dialog::FileDialog,
 
-    #[serde(skip)]
-    rdx_runner: RdxRunner,
-
     settings: Settings,
 }
 
@@ -105,10 +102,11 @@ impl eframe::App for MultinodeApp {
             // The central panel the region left after adding TopPanel's and SidePanel's
             ui.heading("Load Plugin");
 
-            let platform_clone = self.platform.clone();
+            let platform_loader = self.platform.loader.clone();
             let on_load_callback = move |name, bytes| {
-                platform_clone.load_plugin(name, bytes);
+                platform_loader.load_plugin(name, bytes);
             };
+
             if let Err(e) = self.file_dialog.file_dialog(ui, on_load_callback) {
                 tracing::error!("Failed to open file dialog: {:?}", e);
             }
@@ -122,7 +120,7 @@ impl eframe::App for MultinodeApp {
             });
 
             // Show plugins
-            let RdxRunner { plugins } = &mut self.rdx_runner;
+            let RdxRunner { plugins } = &mut self.platform.rdx_runner;
             for (_name, plugin) in plugins.iter_mut() {
                 plugin.render_rhai(ctx.clone());
             }

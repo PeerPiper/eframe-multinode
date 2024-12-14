@@ -21,22 +21,14 @@ use rdx::{layer::*, wasm_component_layer::ResultValue};
 #[cfg(target_arch = "wasm32")]
 use send_wrapper::SendWrapper;
 #[cfg(target_arch = "wasm32")]
-use std::cell::RefCell;
-#[cfg(target_arch = "wasm32")]
 use std::ops::DerefMut;
-#[cfg(target_arch = "wasm32")]
-use std::rc::Rc;
 
-#[cfg(not(target_arch = "wasm32"))]
-use tokio::sync::Mutex as AsyncMutex;
+//#[cfg(not(target_arch = "wasm32"))]
+//use tokio::sync::Mutex as AsyncMutex;
 
-// type alias for the peerpiper
-#[cfg(not(target_arch = "wasm32"))]
-type PeerPiperType = Arc<AsyncMutex<Option<PeerPiper>>>;
-#[cfg(target_arch = "wasm32")]
-type PeerPiperType = Rc<RefCell<Option<PeerPiper>>>;
+//use crate::app::platform::peerpiper::PeerPiper;
 
-use crate::app::platform::peerpiper::PeerPiper;
+use super::CommanderCounter;
 
 /// Use wasm_component_layer to intanitate a plugin and some state data
 pub struct LayerPlugin<T: Inner + Send + Sync> {
@@ -53,9 +45,9 @@ impl<T: Inner + Send + Sync + 'static> LayerPlugin<T> {
         bytes: &[u8],
         data: T,
         wallet_layer: Option<Arc<Mutex<dyn Instantiator<T>>>>,
-        peerpiper: Option<PeerPiperType>,
+        commander: Option<CommanderCounter>,
     ) -> Self {
-        let (instance, store) = instantiate_instance(bytes, data, wallet_layer, peerpiper);
+        let (instance, store) = instantiate_instance(bytes, data, wallet_layer, commander);
 
         Self {
             #[cfg(target_arch = "wasm32")]
@@ -137,7 +129,7 @@ pub fn instantiate_instance<T: Inner + Send + Sync + 'static>(
     bytes: &[u8],
     data: T,
     wallet_layer: Option<Arc<Mutex<dyn Instantiator<T>>>>,
-    peerpiper: Option<PeerPiperType>,
+    commander: Option<CommanderCounter>,
 ) -> (Instance, Store<T, runtime_layer::Engine>) {
     let table = Arc::new(Mutex::new(ResourceTable::new()));
 
@@ -665,7 +657,7 @@ pub fn instantiate_instance<T: Inner + Send + Sync + 'static>(
     // if peerpiper_layer is Some, we can also add the peerpiper functions
     // We can wire peerpiper AllCommands as host functions.
     // For now, let's do get/put for Blockstore actions
-    if let Some(_peerpiper) = peerpiper {
+    if let Some(_cmdr) = commander {
         // Let's provide both get and put functions for the blockstore
         // these orders are async, but we get a root CID as a result,
         // which we always save to the plugin's state StringStore

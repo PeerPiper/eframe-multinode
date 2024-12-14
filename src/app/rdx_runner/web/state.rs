@@ -1,8 +1,8 @@
 //! Custom State for the RDX Plugins, Implements [rdx::layer::Inner] and custom Serialize/Deserialize
 //! so that the [rdx::layer::rhai::Scope] can be serialized and deserialized.
 use crate::app::platform;
-use crate::app::platform::peerpiper::PeerPiper;
 use crate::app::platform::StringStore;
+use crate::app::rdx_runner::CommanderCounter;
 use gloo_timers::callback::Timeout;
 use peerpiper::core::events::AllCommands;
 use peerpiper::core::events::SystemCommand;
@@ -40,7 +40,7 @@ struct InnerState {
     /// The [egui::Context] that holds the UI state. Used to request repaints
     egui_ctx: Option<egui::Context>,
     /// Handler to PeerPiper SystemCommander
-    peerpiper: Rc<RefCell<Option<PeerPiper>>>,
+    commander: CommanderCounter,
     /// String Store map the name of the plugin to the CID of the state
     cid_map: StringStore,
     /// Debouncing mechanism to save the state but workaround many requests at once
@@ -55,7 +55,7 @@ impl State {
     pub fn new(
         name: impl AsRef<str> + Clone,
         ctx: Option<egui::Context>,
-        peerpiper: Rc<RefCell<Option<PeerPiper>>>,
+        commander: CommanderCounter,
     ) -> Self {
         let scope = Rc::new(RefCell::new(Scope::new()));
 
@@ -66,7 +66,7 @@ impl State {
                 scope,
                 egui_ctx: ctx,
                 name: name.clone().as_ref().to_string(),
-                peerpiper,
+                commander,
                 cid_map,
                 timer: Rc::new(RefCell::new(None)),
             }),
@@ -80,18 +80,18 @@ impl State {
         let scope_clone = self.inner.scope.clone();
         if let Some(key) = self.inner.cid_map.get_string(&self.inner.name) {
             if let Ok(cid) = Cid::try_from(key.clone()) {
-                let peerpiper_clone = self.inner.peerpiper.clone();
+                let commander_clone = self.inner.commander.clone();
 
                 platform::spawn(async move {
                     let pp = {
                         log::info!("Borrow mut in init");
-                        let binding = peerpiper_clone.borrow();
-                        let Some(ref mut peerpiper) = binding.as_ref() else {
+                        let binding = commander_clone.borrow();
+                        let Some(ref mut commander) = binding.as_ref() else {
                             log::warn!("INIT: Commander is not set yet");
                             return;
                         };
                         let command = AllCommands::System(SystemCommand::Get { key: cid.into() });
-                        peerpiper.order(command).await
+                        commander.order(command).await
                     };
 
                     let Ok(ReturnValues::Data(bytes)) = pp else {
@@ -107,7 +107,7 @@ impl State {
                     };
 
                     *scope_clone.borrow_mut() = scope;
-                    log::info!("*** State loaded from PeerPiper: {:?}", scope_clone);
+                    log::info!("*** State loaded from commander: {:?}", scope_clone);
                 });
             }
         }
@@ -128,7 +128,7 @@ impl State {
         // Save the serialized state to disk, independent of the platform
         // for this we can use peerpiper SystemCommandHanlder to put the bytes into the local system
         log::info!("borrow_mut in state.save()");
-        let binding = self.inner.peerpiper.borrow();
+        let binding = self.inner.commander.borrow();
         let Some(cmdr) = binding.as_ref() else {
             log::warn!("Save: Commander is not set yet");
             return Err(anyhow::anyhow!("Anyhow Save: Commander is not set yet"))?;

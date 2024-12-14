@@ -53,7 +53,7 @@ impl Guest for Component {
                 <Vertical>
                     <Label>Create a new wallet</Label>
                     <TextEdit>{{username}}</TextEdit>
-                    <TextEdit>{{password}}</TextEdit>
+                    <TextEdit password="true">{{password}}</TextEdit>
                     <Button on_click=create(username, password)>Login</Button>
                 </Vertical>
             `)
@@ -63,7 +63,7 @@ impl Guest for Component {
                     <Label>Unlock your wallet</Label>
                     <TextEdit>{{encrypted_seed}}</TextEdit>
                     <TextEdit>{{username}}</TextEdit>
-                    <TextEdit>{{password}}</TextEdit>
+                    <TextEdit password="true">{{password}}</TextEdit>
                     <Button on_click=unlock(username, password, encrypted_seed)>Unlock</Button>
                 </Vertical>
             `)
