@@ -1,5 +1,7 @@
 //! Impl Storage interface for native platform
 use std::fs;
+use std::fs::File;
+use std::io::prelude::*;
 use std::path::PathBuf;
 
 /// Storage interface for native platform
@@ -10,13 +12,9 @@ pub struct StringStore {
 
 impl StringStore {
     // use dirs to get the default storage directory
-    pub fn new(dir: impl Into<PathBuf>) -> Self {
-        let dir = dirs::data_dir()
-            .unwrap()
-            .join("multinode/cids/")
-            .join(dir.into());
+    pub fn new() -> Self {
+        let dir = dirs::data_dir().unwrap().join("multinode/cids/");
         fs::create_dir_all(&dir).unwrap();
-
         Self { dir }
     }
     /// Get the value from disk
@@ -27,11 +25,13 @@ impl StringStore {
     }
 
     /// Save the value to disk
-    pub fn set_string(&self, key: &str, value: String) {
-        let path = PathBuf::from(key);
-        let path = self.dir.join(path);
-        tracing::debug!("Writing {:?} to {:?}", key, path);
-        fs::write(path, value).unwrap();
+    pub fn set_string(&self, filename: &str, value: String) -> std::io::Result<()> {
+        // create the file if it hasn't been created,
+        // otherwise, open the file and write the value
+        let path = self.dir.join(filename);
+        let mut file = File::create(path.clone())?;
+        tracing::info!("Saving to {:?}", path);
+        file.write_all(value.as_bytes())
     }
 
     //pub fn flush(&mut self) {
