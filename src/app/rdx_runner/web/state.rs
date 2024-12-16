@@ -107,7 +107,7 @@ impl State {
                     };
 
                     *scope_clone.borrow_mut() = scope;
-                    log::info!("*** State loaded from commander: {:?}", scope_clone);
+                    //log::info!("*** State loaded from commander: {:?}", scope_clone);
                 });
             }
         }
