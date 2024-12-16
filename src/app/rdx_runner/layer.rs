@@ -463,7 +463,6 @@ pub fn instantiate_instance<T: Inner + Send + Sync + 'static>(
                 FuncType::new([ValueType::Variant(event)], []),
                 move |mut store, params, _results| {
                     if let Value::Variant(variant) = &params[0] {
-                        tracing::debug!("Emitting event: {:?}", variant);
                         if let Some(Value::Record(record)) = variant.value() {
                             // record is either: string-event, bytes-event, string-list-event
                             match record.field("value") {
@@ -473,7 +472,7 @@ pub fn instantiate_instance<T: Inner + Send + Sync + 'static>(
                                     }
                                 }
                                 Some(Value::List(list)) => {
-                                    tracing::debug!("Emitting list: {:?}", list);
+                                    //tracing::debug!("Emitting list: {:?}", list);
                                     let vals = list
                                         .iter()
                                         .map(|v| {
@@ -500,13 +499,13 @@ pub fn instantiate_instance<T: Inner + Send + Sync + 'static>(
                                             }
                                         })
                                         .collect::<Vec<_>>();
-                                    tracing::debug!("Emitting list: {:?}", vals);
+                                    //tracing::debug!("Emitting list: {:?}", vals);
                                     if let Some(Value::String(name)) = record.field("name") {
-                                        tracing::debug!(
-                                            "Emitting name value pair: {:?} {:?}",
-                                            name,
-                                            vals
-                                        );
+                                        //tracing::debug!(
+                                        //    "Emitting name value pair: {:?} {:?}",
+                                        //    name,
+                                        //    vals
+                                        //);
                                         store.data_mut().update(&name, &*vals);
                                     }
                                 }

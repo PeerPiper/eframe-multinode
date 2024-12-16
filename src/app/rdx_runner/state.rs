@@ -46,9 +46,6 @@ impl State {
     ) -> Self {
         let mut scope = Scope::new();
 
-        #[cfg(not(target_arch = "wasm32"))]
-        let cid_map = StringStore::new(name.as_ref());
-        #[cfg(target_arch = "wasm32")]
         let cid_map = StringStore::new();
 
         // Load the CID of the state from the platform storage
@@ -86,7 +83,7 @@ impl State {
                                 return;
                             };
 
-                            tracing::info!("*** State loaded: {:?}", scope);
+                            tracing::info!("*** State loaded from disk.");
                             tx.send(Some(scope)).unwrap();
                             break;
                         } else {
@@ -102,7 +99,6 @@ impl State {
                 }
             }
         }
-        tracing::info!("*** State loaded: {:?}", scope);
 
         Self {
             scope,
@@ -142,7 +138,9 @@ impl State {
 
         // Save name:cid mapping to platform storage
         // filesystem, localstorage, etc.
-        self.cid_map.set_string(&self.name, cid.to_string());
+        if let Err(e) = self.cid_map.set_string(&self.name, cid.to_string()) {
+            tracing::error!("Error saving state: {:?}", e);
+        }
 
         Ok(cid.to_string())
     }
