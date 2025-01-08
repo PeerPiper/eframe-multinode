@@ -48,7 +48,9 @@ pub struct Settings {
     /// Whether the settings window is open
     open: bool,
 
-    /// Updated on startup flag
+    /// Updated on startup flag. Used to auto-update on startup.
+    /// Skipped in serialization so the flag is not saved.
+    #[serde(skip)]
     updated_on_startup: bool,
 }
 
@@ -182,12 +184,13 @@ impl Settings {
 
             platform::spawn(async move {
                 // Fetch data
+                tracing::trace!("Auto Updating");
                 match fut.await {
                     Ok(data) => {
-                        tracing::debug!("Data: {:?}", data);
+                        tracing::debug!("Auto updated data: {:?}", data);
                     }
                     Err(e) => {
-                        tracing::error!("Error: {:?}", e);
+                        tracing::error!("Auto update Error: {:?}", e);
                     }
                 }
             });
