@@ -160,7 +160,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: pre-build
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
         - os: macos-latest
