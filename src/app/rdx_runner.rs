@@ -6,33 +6,33 @@ mod debouncer; // debouncer for tokio only
 
 mod layer;
 
-use crate::app::platform::platform::Blockstore;
-use layer::LayerPlugin;
-use peerpiper::core::Commander;
+use crate::app::platform;
+
+pub use layer::LayerPlugin;
 use rdx::{
     layer::{rhai::Dynamic, Instantiator, Value},
     PluginDeets,
 };
 use std::{collections::HashMap, sync::Arc};
 use std::{ops::Deref, sync::Mutex};
+#[cfg(not(target_arch = "wasm32"))]
+use tokio::sync::Mutex as AsyncMutex;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod state;
 #[cfg(not(target_arch = "wasm32"))]
-use state::State;
-#[cfg(not(target_arch = "wasm32"))]
-use tokio::sync::Mutex as AsyncMutex;
+pub use state::State;
 
 #[cfg(target_arch = "wasm32")]
 mod web;
-#[cfg(target_arch = "wasm32")]
-use crate::app::platform;
 #[cfg(target_arch = "wasm32")]
 use std::cell::RefCell;
 #[cfg(target_arch = "wasm32")]
 use std::rc::Rc;
 #[cfg(target_arch = "wasm32")]
-use web::state::State;
+pub use web::state::State;
+
+use super::platform::piper::PeerPiper;
 
 /// The RdxRunner struct is the main struct that holds all the plugins and their state.
 pub struct RdxRunner {
@@ -43,17 +43,17 @@ pub struct RdxRunner {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-type CommanderCounter = Arc<AsyncMutex<Option<Commander<Blockstore>>>>;
+type PeerPiperWired = Arc<AsyncMutex<PeerPiper>>;
 #[cfg(target_arch = "wasm32")]
-type CommanderCounter = Rc<RefCell<Option<Commander<Blockstore>>>>;
+type PeerPiperWired = Rc<RefCell<Option<PeerPiper>>>;
 
 impl RdxRunner {
     pub fn new(
-        commander: CommanderCounter,
+        peerpiper: PeerPiperWired,
         ctx: Option<egui::Context>,
-        #[cfg(target_arch = "wasm32")] receiver: futures::channel::oneshot::Receiver<()>,
+        #[cfg(target_arch = "wasm32")] receiver: futures::channel::oneshot::Receiver<PeerPiper>,
     ) -> Self {
-        let mut plugins = HashMap::new();
+        let mut all_plugin_deets = HashMap::new();
 
         // the wallet_plugin needs to be separate from the other plugins
         // because it's exports (get-mk, prove) become the imports for
@@ -89,7 +89,7 @@ impl RdxRunner {
         //    #[cfg(target_arch = "wasm32")]
         //    peerpiper_clone.borrow_mut().replace(peerpiper);
         //
-        //    log::info!("PeerPiper created");
+        //    tracing::info!("PeerPiper created");
         //    #[cfg(target_arch = "wasm32")]
         //    sender.send(()).unwrap();
         //});
@@ -97,13 +97,11 @@ impl RdxRunner {
         // Since the browser is so much slower than native,
         // We need to gather up the arc_wallet and all the arc_plugins
         // and call them after we've received the signal that peerpiper is ready.
-        #[cfg(target_arch = "wasm32")]
-        let arc_collection = Arc::new(Mutex::new(HashMap::new()));
 
         // Instantiate the wallet_plugin
         let mut wallet_layer = LayerPlugin::new(
             wallet_bytes,
-            State::new(wallet_name.to_string(), ctx.clone(), commander.clone()),
+            State::new(wallet_name.to_string(), ctx.clone(), peerpiper.clone()),
             None,
             None,
         );
@@ -114,14 +112,12 @@ impl RdxRunner {
 
         let arc_wallet = Arc::new(Mutex::new(wallet_layer));
 
-        // add to arc_collection
-        #[cfg(target_arch = "wasm32")]
-        {
-            arc_collection
-                .lock()
-                .unwrap()
-                .insert(wallet_name.to_string(), arc_wallet.clone());
-        }
+        let arc_collection = Arc::new(Mutex::new(HashMap::new()));
+
+        arc_collection
+            .lock()
+            .unwrap()
+            .insert(wallet_name.to_string(), arc_wallet.clone());
 
         let mut wallet_deets = PluginDeets::new(
             wallet_name.to_string(),
@@ -165,32 +161,41 @@ impl RdxRunner {
 
         register(&mut wallet_deets, "unlocked", &[]);
 
-        plugins.insert(wallet_name.to_string(), wallet_deets);
+        all_plugin_deets.insert(wallet_name.to_string(), wallet_deets);
 
         // the rest of the plugins
         for (name, wasm_bytes) in builtins {
-            log::info!("Loading plugin: {:?}", name);
+            tracing::info!("Loading plugin: {:?}", name);
             let mut plugin = LayerPlugin::new(
                 wasm_bytes,
-                State::new(name.to_string(), ctx.clone(), commander.clone()),
+                State::new(name.to_string(), ctx.clone(), peerpiper.clone()),
                 Some(arc_wallet.clone()),
-                Some(commander.clone()),
+                Some(peerpiper.clone()),
             );
             let rdx_source = plugin.call("load", &[]).unwrap();
+
+            // if this is not wasm32 target_arch, we will have the init scope loaded
+            // with State::new() and we can call the init() function here
+            // so that the scope can be loaded into the plugin
+            //
+            // With wasm32, this init() will have to happen after the commander is ready
+            #[cfg(not(target_arch = "wasm32"))]
+            if let Err(e) = plugin.call("init", &[]) {
+                // it's ok not to have an init function
+                // the plugin just won't be initialized with any loaded scope
+                tracing::warn!("Failed to call init on plugin: {:?}", e);
+            }
+
             let Some(Value::String(rdx_source)) = rdx_source else {
                 panic!("RDX Source should be a string");
             };
 
             let arc_plugin = Arc::new(Mutex::new(plugin));
 
-            // add to arc_collection
-            #[cfg(target_arch = "wasm32")]
-            {
-                arc_collection
-                    .lock()
-                    .unwrap()
-                    .insert(name.to_string(), arc_plugin.clone());
-            }
+            arc_collection
+                .lock()
+                .unwrap()
+                .insert(name.to_string(), arc_plugin.clone());
 
             let mut plugin_deets =
                 PluginDeets::new(name.to_string(), arc_plugin, rdx_source.to_string());
@@ -198,7 +203,18 @@ impl RdxRunner {
             // register get_mk with rhai, so we can bind it inthe plugin and call it from rhai scripts
             register(&mut plugin_deets, "getmk", &[]);
 
-            plugins.insert(name.to_string(), plugin_deets);
+            all_plugin_deets.insert(name.to_string(), plugin_deets);
+        }
+
+        // For native arch, we set the peerpiper.plugins to the arc_collection
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let piper_clone = peerpiper.clone();
+            platform::spawn(async move {
+                let binding = piper_clone.lock().await;
+                let mut hash_map = binding.plugins.lock().unwrap();
+                *hash_map = arc_collection.lock().unwrap().clone();
+            });
         }
 
         // clone the arc_collection, pass it into the spawned task,
@@ -212,21 +228,53 @@ impl RdxRunner {
         // The browser on the other hand is slow and needs to wait for the commander to be ready.
         #[cfg(target_arch = "wasm32")]
         platform::spawn(async move {
-            tracing::info!("Waiting for commander to be ready");
-            receiver.await.unwrap();
-            tracing::info!("commander is ready");
-            let lock = arc_collection_clone.lock().unwrap();
-            for (name, arc_plugin) in lock.iter() {
-                tracing::info!("Initializing plugin: {:?}", name);
-                log::info!("Initializing plugin: {:?}", name);
-                let plugin = arc_plugin.lock().unwrap();
-                plugin.store().data().init();
-                //drop(plugin);
-                tracing::info!("Initialized plugin: {:?}", name);
-                log::info!("Initialized plugin: {:?}", name);
+            tracing::info!("Waiting for peerpiper commander to be ready");
+
+            // grab the PeerPiper from the receiver
+            let piper = receiver.await.unwrap();
+
+            // set the plugins in the PeerPiper to the arc_collection
+            let mut piper_plugins_lock = piper.plugins.lock().unwrap();
+            *piper_plugins_lock = arc_collection_clone.lock().unwrap().clone();
+
+            drop(piper_plugins_lock);
+
+            // Update the Rc
+            {
+                peerpiper.borrow_mut().replace(piper);
+            }
+
+            // Initialize the plugins
+            {
+                for (name, arc_plugin) in peerpiper
+                    .borrow()
+                    .as_ref()
+                    .unwrap()
+                    .plugins
+                    .lock()
+                    .unwrap()
+                    .iter()
+                {
+                    tracing::info!("Initializing plugin: {:?}", name);
+                    let mut plugin = arc_plugin.lock().unwrap();
+                    plugin.store().data().init();
+                    tracing::info!("Initialized plugin: {:?}", name);
+
+                    // once the scope is loaded, we should call the init() function
+                    // to intiiate the plugin with the given state
+                    // wasm32 happens here, whereas native happens in the loop above after
+                    // State::new() is called
+                    if let Err(e) = plugin.call("init", &[]) {
+                        // it's ok not to have an init function
+                        // the plugin just won't be initialized with any loaded scope
+                        tracing::warn!("Failed to call init on plugin: {:?}", e);
+                    }
+                }
             }
         });
 
-        Self { plugins }
+        Self {
+            plugins: all_plugin_deets,
+        }
     }
 }

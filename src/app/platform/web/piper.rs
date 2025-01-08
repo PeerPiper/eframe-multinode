@@ -2,18 +2,10 @@
 #![allow(dead_code)]
 
 use super::web_error::WebError as Error;
-use crate::app::platform::piper::PeerPiper;
-use crate::app::Cid;
 use peerpiper_browser::opfs::OPFSBlockstore;
+use peerpiper_browser::Blockstore;
 use send_wrapper::SendWrapper;
 use std::ops::Deref;
-
-/// Creates a new PeerPiper instance with [NativeBlockstore]
-pub async fn create_peerpiper() -> Result<PeerPiper, Error> {
-    log::info!("Creating PeerPiper with OPFSBlockstore wrapped");
-    let handler = OPFSWrapped::new().await?;
-    Ok(PeerPiper::new(handler))
-}
 
 /// A Wrapper sturct around OPFSBlockstore so that we can make it Send
 #[derive(Debug, Clone)]
@@ -32,16 +24,29 @@ impl OPFSWrapped {
     }
 }
 
-// impl SystemCommandHandler for OPFSWrapped:
-impl peerpiper::core::SystemCommandHandler for OPFSWrapped {
-    type Error = Error;
-
-    async fn put(&self, bytes: Vec<u8>) -> Result<Cid, Error> {
-        // use send_wrapper get_ref to execute the inner function
-        Ok(self.inner.deref().put(bytes).await?)
+impl Blockstore for OPFSWrapped {
+    async fn get<const S: usize>(
+        &self,
+        cid: &cid::CidGeneric<S>,
+    ) -> blockstore::Result<Option<Vec<u8>>> {
+        tracing::debug!("Getting block from OPFS for CID: {:?}", cid);
+        self.inner.deref().get(cid).await
     }
 
-    async fn get(&self, key: Vec<u8>) -> Result<Vec<u8>, Error> {
-        Ok(self.inner.deref().get(key).await?)
+    async fn put_keyed<const S: usize>(
+        &self,
+        cid: &cid::CidGeneric<S>,
+        data: &[u8],
+    ) -> blockstore::Result<()> {
+        self.inner.deref().put_keyed(cid, data).await
+    }
+
+    async fn remove<const S: usize>(&self, _cid: &cid::CidGeneric<S>) -> blockstore::Result<()> {
+        //todo!();
+        Ok(())
+    }
+
+    async fn close(self) -> blockstore::Result<()> {
+        Ok(())
     }
 }

@@ -9,19 +9,23 @@ mod storage;
 
 pub use error::Error;
 pub use peerpiper_native::NativeBlockstore as Blockstore;
+use peerpiper_native::NativeBlockstoreBuilder;
 pub(crate) use settings::Settings;
 pub use storage::StringStore;
+use tokio::sync::Mutex as AsyncMutex;
 
 use multiaddr::Multiaddr;
-use peerpiper_plugins::tokio::{ExternalEvents, PluggableClient, PluggablePiper};
+pub use peerpiper::core::events::PublicEvent;
+use std::collections::HashMap;
 use std::future::Future;
 use std::sync::{Arc, Mutex};
 
 use crate::app::rdx_runner::RdxRunner;
 
-// use peerpiper_plugins::{PluggablePiper};
+use super::piper::PeerPiper;
 
 pub fn spawn(f: impl Future<Output = ()> + Send + 'static) {
+    tracing::debug!("Spawning tokio task");
     tokio::spawn(f);
 }
 
@@ -53,18 +57,18 @@ impl ContextSet {
 }
 
 #[derive(Clone)]
-pub(crate) struct Loader(PluggableClient);
+pub(crate) struct Loader;
 
 impl Loader {
     /// Load a plugin into the Platform
-    pub fn load_plugin(&self, name: String, wasm: Vec<u8>) {
+    pub fn load_plugin(&self, _name: String, _wasmm: Vec<u8>) {
         // call self.loader.load_plugin(name, wasm).await from this sync function using tokio
-        let mut loader = self.0.clone();
-        tokio::task::spawn(async move {
-            if let Err(e) = loader.load_plugin(name, &wasm).await {
-                tracing::error!("Failed to load plugin: {:?}", e);
-            }
-        });
+        //let mut loader = self.0.clone();
+        //tokio::task::spawn(async move {
+        //    if let Err(e) = loader.load_plugin(name, &wasm).await {
+        //        tracing::error!("Failed to load plugin: {:?}", e);
+        //    }
+        //});
     }
 }
 
@@ -74,47 +78,109 @@ pub(crate) struct Platform {
     /// Clone of the [egui::Context] so that the platform can trigger repaints
     ctx: Arc<Mutex<ContextSet>>,
 
+    /// Gives the Platform the ability to load plugins
     pub loader: Loader,
 
+    /// The address of the node
     addr: Arc<Mutex<Option<Multiaddr>>>,
 
     pub rdx_runner: RdxRunner,
+    ///// PeerPiper gives us access to the netowrk, storage, and plugins
+    //pub peerpiper: Arc<AsyncMutex<PeerPiper>>,
 }
 
 impl Default for Platform {
     fn default() -> Self {
+        // Collection of the Plugins
+        let arc_collection_plugins = Arc::new(Mutex::new(HashMap::new()));
+
         let log = Arc::new(Mutex::new(Vec::new()));
         let ctx: Arc<Mutex<ContextSet>> = Arc::new(Mutex::new(ContextSet::new()));
         let addr = Arc::new(Mutex::new(None));
 
-        let (mut pluggable, command_receiver, pluggable_client, mut plugin_evts) =
-            PluggablePiper::new();
+        // setup oneshot channel to pass blockstore from task back to this thread
+        // the receiver must not be async
+        let (tx, rx) = std::sync::mpsc::channel();
+
+        super::spawn(async move {
+            // 1. First we need a NativeBlockstore from NativeBlockstoreBuilder
+            let blockstore = NativeBlockstoreBuilder::default().open().await.unwrap();
+            tx.send(blockstore).unwrap();
+        });
+
+        let blockstore = rx.recv().unwrap();
+
+        let peerpiper = Arc::new(AsyncMutex::new(PeerPiper::new(
+            blockstore,
+            arc_collection_plugins.clone(),
+        )));
 
         let log_clone = log.clone();
         let ctx_clone = ctx.clone();
         let addr_clone = addr.clone();
 
+        //let (on_event, mut plugin_evts) = mpsc::channel(16);
+        let (on_event, mut rx_evts) = tokio::sync::mpsc::channel(32);
+
         // task for listening on plugin events and updating the log accoringly
+        let peerpiper_clone = peerpiper.clone();
+        super::spawn(async move {
+            let libp2p_endpoints = vec![];
+            let listen = match peerpiper_clone.lock().await.connect(libp2p_endpoints).await {
+                Ok(listen) => listen,
+                Err(e) => {
+                    tracing::error!("Failed to connect to the network: {:?}", e);
+                    return;
+                }
+            };
+
+            listen(on_event);
+        });
+
         tokio::task::spawn(async move {
-            while let Some(event) = plugin_evts.recv().await {
+            while let Some(event) = rx_evts.recv().await {
                 let msg = format!("{:?}", event);
                 tracing::debug!("Received event: {:?}", msg);
 
                 let timestamp = chrono::Local::now().format("%H:%M:%S%.3f");
 
                 match event {
-                    ExternalEvents::Address(addr) => {
+                    PublicEvent::ListenAddr { address: addr, .. } => {
                         tracing::debug!("Node Address: {}", &addr.to_string());
+                        // Update rules: only update if this is an/ip6/ AND there isn't already an
+                        // /ip6/ address in the addr
+
+                        // first, check if empty
                         let mut lock = addr_clone.lock().unwrap();
-                        *lock = Some(addr);
+                        if lock.is_none() {
+                            *lock = Some(addr);
+                        } else {
+                            // not empty, check if it's an ip6 address repalcing an ip4 address
+                            // if so, update it
+                            let is_ip4 = lock.as_ref().unwrap().to_string().starts_with("/ip4/");
+                            if is_ip4 && addr.to_string().starts_with("/ip6/") {
+                                *lock = Some(addr);
+                            }
+                        }
+
                         log_clone.lock().unwrap().push(msg);
                     }
-                    ExternalEvents::Message(msg) => {
-                        tracing::debug!("Received Message: {:?}", msg);
-                        log_clone.lock().unwrap().push(msg);
+                    PublicEvent::Message { topic, data, peer } => {
+                        // check if data decodes into a utf8 string, if not skip it
+                        if let Ok(maybe_str) = std::str::from_utf8(&data) {
+                            let msg = format!(
+                                "[{}] 📬 Message from {}: {}: {}",
+                                timestamp, peer, topic, maybe_str
+                            );
+                            tracing::debug!("Received Message: {:?}", msg);
+                            log_clone.lock().unwrap().push(msg);
+                        }
                     }
-                    ExternalEvents::Pong { peer, rtt } => {
+                    PublicEvent::Pong { peer, rtt } => {
                         let msg = format!("[{}] 🏓 Pong {}ms from {}", timestamp, rtt, peer);
+                        log_clone.lock().unwrap().push(msg);
+                    }
+                    _ => {
                         log_clone.lock().unwrap().push(msg);
                     }
                 }
@@ -123,23 +189,15 @@ impl Default for Platform {
             }
         });
 
-        // Execute the runtime in its own thread.
-        tokio::task::spawn(async move {
-            pluggable.run(command_receiver).await.unwrap_or_else(|e| {
-                tracing::error!("Failed to run PluggablePiper: {:?}", e);
-            });
-        });
-
-        let commander_clone = pluggable_client.commander.clone();
-
-        let rdx_runner = RdxRunner::new(commander_clone, None);
+        let rdx_runner = RdxRunner::new(peerpiper.clone(), None);
 
         Self {
             log,
             ctx,
-            loader: Loader(pluggable_client),
             addr,
+            loader: Loader,
             rdx_runner,
+            //peerpiper,
         }
     }
 }
@@ -152,7 +210,7 @@ impl Drop for Platform {
 }
 
 impl Platform {
-    ///// Load a plugin into the Platform
+    ///// Load a plugin into the Platform put it in arc_collection of plugins
     //pub fn load_plugin(&self, name: String, wasm: Vec<u8>) {
     //    // call self.loader.load_plugin(name, wasm).await from this sync function using tokio
     //    let mut loader = self.loader.clone();

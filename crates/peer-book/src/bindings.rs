@@ -992,66 +992,6 @@ pub mod exports {
                 #[doc(hidden)]
                 static __FORCE_SECTION_REF: fn() = super::super::super::super::__link_custom_section_describing_imports;
                 use super::super::super::super::_rt;
-                pub type KeyArgs = super::super::super::super::host::component::types::KeyArgs;
-                #[derive(Clone)]
-                pub enum MkError {
-                    /// The error message
-                    InvalidCodec(_rt::String),
-                    /// Wallet uninitialized
-                    WalletUninitialized,
-                    /// Mulitkey Error
-                    MultikeyError(_rt::String),
-                    /// Key not found
-                    KeyNotFound(_rt::String),
-                }
-                impl ::core::fmt::Debug for MkError {
-                    fn fmt(
-                        &self,
-                        f: &mut ::core::fmt::Formatter<'_>,
-                    ) -> ::core::fmt::Result {
-                        match self {
-                            MkError::InvalidCodec(e) => {
-                                f.debug_tuple("MkError::InvalidCodec").field(e).finish()
-                            }
-                            MkError::WalletUninitialized => {
-                                f.debug_tuple("MkError::WalletUninitialized").finish()
-                            }
-                            MkError::MultikeyError(e) => {
-                                f.debug_tuple("MkError::MultikeyError").field(e).finish()
-                            }
-                            MkError::KeyNotFound(e) => {
-                                f.debug_tuple("MkError::KeyNotFound").field(e).finish()
-                            }
-                        }
-                    }
-                }
-                impl ::core::fmt::Display for MkError {
-                    fn fmt(
-                        &self,
-                        f: &mut ::core::fmt::Formatter<'_>,
-                    ) -> ::core::fmt::Result {
-                        write!(f, "{:?}", self)
-                    }
-                }
-                impl std::error::Error for MkError {}
-                #[derive(Clone)]
-                pub struct ProveArgs {
-                    /// The Multikey
-                    pub mk: _rt::Vec<u8>,
-                    /// The data
-                    pub data: _rt::Vec<u8>,
-                }
-                impl ::core::fmt::Debug for ProveArgs {
-                    fn fmt(
-                        &self,
-                        f: &mut ::core::fmt::Formatter<'_>,
-                    ) -> ::core::fmt::Result {
-                        f.debug_struct("ProveArgs")
-                            .field("mk", &self.mk)
-                            .field("data", &self.data)
-                            .finish()
-                    }
-                }
                 #[doc(hidden)]
                 #[allow(non_snake_case)]
                 pub unsafe fn _export_load_cabi<T: Guest>() -> *mut u8 {
@@ -1075,273 +1015,59 @@ pub mod exports {
                 }
                 #[doc(hidden)]
                 #[allow(non_snake_case)]
-                pub unsafe fn _export_create_cabi<T: Guest>(
+                pub unsafe fn _export_search_cabi<T: Guest>(
                     arg0: *mut u8,
                     arg1: usize,
-                    arg2: *mut u8,
-                    arg3: usize,
-                ) {
-                    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
-                    let len0 = arg1;
-                    let bytes0 = _rt::Vec::from_raw_parts(arg0.cast(), len0, len0);
-                    let len1 = arg3;
-                    let bytes1 = _rt::Vec::from_raw_parts(arg2.cast(), len1, len1);
-                    T::create(_rt::string_lift(bytes0), _rt::string_lift(bytes1));
-                }
-                #[doc(hidden)]
-                #[allow(non_snake_case)]
-                pub unsafe fn _export_unlock_cabi<T: Guest>(
-                    arg0: *mut u8,
-                    arg1: usize,
-                    arg2: *mut u8,
-                    arg3: usize,
-                    arg4: *mut u8,
-                    arg5: usize,
-                ) {
-                    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
-                    let len0 = arg1;
-                    let bytes0 = _rt::Vec::from_raw_parts(arg0.cast(), len0, len0);
-                    let len1 = arg3;
-                    let bytes1 = _rt::Vec::from_raw_parts(arg2.cast(), len1, len1);
-                    let len2 = arg5;
-                    let bytes2 = _rt::Vec::from_raw_parts(arg4.cast(), len2, len2);
-                    T::unlock(
-                        _rt::string_lift(bytes0),
-                        _rt::string_lift(bytes1),
-                        _rt::string_lift(bytes2),
-                    );
-                }
-                #[doc(hidden)]
-                #[allow(non_snake_case)]
-                pub unsafe fn _export_get_mk_cabi<T: Guest>(
-                    arg0: *mut u8,
-                    arg1: usize,
-                    arg2: *mut u8,
-                    arg3: usize,
-                    arg4: i32,
-                    arg5: i32,
                 ) -> *mut u8 {
                     #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
                     let len0 = arg1;
                     let bytes0 = _rt::Vec::from_raw_parts(arg0.cast(), len0, len0);
-                    let len1 = arg3;
-                    let bytes1 = _rt::Vec::from_raw_parts(arg2.cast(), len1, len1);
-                    let result2 = T::get_mk(super::super::super::super::host::component::types::KeyArgs {
-                        key: _rt::string_lift(bytes0),
-                        codec: _rt::string_lift(bytes1),
-                        threshold: arg4 as u8,
-                        limit: arg5 as u8,
-                    });
-                    let ptr3 = _RET_AREA.0.as_mut_ptr().cast::<u8>();
-                    match result2 {
+                    let result1 = T::search(_rt::string_lift(bytes0));
+                    let ptr2 = _RET_AREA.0.as_mut_ptr().cast::<u8>();
+                    match result1 {
                         Ok(e) => {
-                            *ptr3.add(0).cast::<u8>() = (0i32) as u8;
-                            let vec4 = (e).into_boxed_slice();
+                            *ptr2.add(0).cast::<u8>() = (0i32) as u8;
+                            let vec3 = (e.into_bytes()).into_boxed_slice();
+                            let ptr3 = vec3.as_ptr().cast::<u8>();
+                            let len3 = vec3.len();
+                            ::core::mem::forget(vec3);
+                            *ptr2.add(8).cast::<usize>() = len3;
+                            *ptr2.add(4).cast::<*mut u8>() = ptr3.cast_mut();
+                        }
+                        Err(e) => {
+                            *ptr2.add(0).cast::<u8>() = (1i32) as u8;
+                            let vec4 = (e.into_bytes()).into_boxed_slice();
                             let ptr4 = vec4.as_ptr().cast::<u8>();
                             let len4 = vec4.len();
                             ::core::mem::forget(vec4);
-                            *ptr3.add(8).cast::<usize>() = len4;
-                            *ptr3.add(4).cast::<*mut u8>() = ptr4.cast_mut();
-                        }
-                        Err(e) => {
-                            *ptr3.add(0).cast::<u8>() = (1i32) as u8;
-                            match e {
-                                MkError::InvalidCodec(e) => {
-                                    *ptr3.add(4).cast::<u8>() = (0i32) as u8;
-                                    let vec5 = (e.into_bytes()).into_boxed_slice();
-                                    let ptr5 = vec5.as_ptr().cast::<u8>();
-                                    let len5 = vec5.len();
-                                    ::core::mem::forget(vec5);
-                                    *ptr3.add(12).cast::<usize>() = len5;
-                                    *ptr3.add(8).cast::<*mut u8>() = ptr5.cast_mut();
-                                }
-                                MkError::WalletUninitialized => {
-                                    *ptr3.add(4).cast::<u8>() = (1i32) as u8;
-                                }
-                                MkError::MultikeyError(e) => {
-                                    *ptr3.add(4).cast::<u8>() = (2i32) as u8;
-                                    let vec6 = (e.into_bytes()).into_boxed_slice();
-                                    let ptr6 = vec6.as_ptr().cast::<u8>();
-                                    let len6 = vec6.len();
-                                    ::core::mem::forget(vec6);
-                                    *ptr3.add(12).cast::<usize>() = len6;
-                                    *ptr3.add(8).cast::<*mut u8>() = ptr6.cast_mut();
-                                }
-                                MkError::KeyNotFound(e) => {
-                                    *ptr3.add(4).cast::<u8>() = (3i32) as u8;
-                                    let vec7 = (e.into_bytes()).into_boxed_slice();
-                                    let ptr7 = vec7.as_ptr().cast::<u8>();
-                                    let len7 = vec7.len();
-                                    ::core::mem::forget(vec7);
-                                    *ptr3.add(12).cast::<usize>() = len7;
-                                    *ptr3.add(8).cast::<*mut u8>() = ptr7.cast_mut();
-                                }
-                            }
+                            *ptr2.add(8).cast::<usize>() = len4;
+                            *ptr2.add(4).cast::<*mut u8>() = ptr4.cast_mut();
                         }
                     };
-                    ptr3
+                    ptr2
                 }
                 #[doc(hidden)]
                 #[allow(non_snake_case)]
-                pub unsafe fn __post_return_get_mk<T: Guest>(arg0: *mut u8) {
+                pub unsafe fn __post_return_search<T: Guest>(arg0: *mut u8) {
                     let l0 = i32::from(*arg0.add(0).cast::<u8>());
                     match l0 {
                         0 => {
                             let l1 = *arg0.add(4).cast::<*mut u8>();
                             let l2 = *arg0.add(8).cast::<usize>();
-                            let base3 = l1;
-                            let len3 = l2;
-                            _rt::cabi_dealloc(base3, len3 * 1, 1);
+                            _rt::cabi_dealloc(l1, l2, 1);
                         }
                         _ => {
-                            let l4 = i32::from(*arg0.add(4).cast::<u8>());
-                            match l4 {
-                                0 => {
-                                    let l5 = *arg0.add(8).cast::<*mut u8>();
-                                    let l6 = *arg0.add(12).cast::<usize>();
-                                    _rt::cabi_dealloc(l5, l6, 1);
-                                }
-                                1 => {}
-                                2 => {
-                                    let l7 = *arg0.add(8).cast::<*mut u8>();
-                                    let l8 = *arg0.add(12).cast::<usize>();
-                                    _rt::cabi_dealloc(l7, l8, 1);
-                                }
-                                _ => {
-                                    let l9 = *arg0.add(8).cast::<*mut u8>();
-                                    let l10 = *arg0.add(12).cast::<usize>();
-                                    _rt::cabi_dealloc(l9, l10, 1);
-                                }
-                            }
+                            let l3 = *arg0.add(4).cast::<*mut u8>();
+                            let l4 = *arg0.add(8).cast::<usize>();
+                            _rt::cabi_dealloc(l3, l4, 1);
                         }
-                    }
-                }
-                #[doc(hidden)]
-                #[allow(non_snake_case)]
-                pub unsafe fn _export_prove_cabi<T: Guest>(
-                    arg0: *mut u8,
-                    arg1: usize,
-                    arg2: *mut u8,
-                    arg3: usize,
-                ) -> *mut u8 {
-                    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
-                    let len0 = arg1;
-                    let len1 = arg3;
-                    let result2 = T::prove(ProveArgs {
-                        mk: _rt::Vec::from_raw_parts(arg0.cast(), len0, len0),
-                        data: _rt::Vec::from_raw_parts(arg2.cast(), len1, len1),
-                    });
-                    let ptr3 = _RET_AREA.0.as_mut_ptr().cast::<u8>();
-                    match result2 {
-                        Ok(e) => {
-                            *ptr3.add(0).cast::<u8>() = (0i32) as u8;
-                            let vec4 = (e).into_boxed_slice();
-                            let ptr4 = vec4.as_ptr().cast::<u8>();
-                            let len4 = vec4.len();
-                            ::core::mem::forget(vec4);
-                            *ptr3.add(8).cast::<usize>() = len4;
-                            *ptr3.add(4).cast::<*mut u8>() = ptr4.cast_mut();
-                        }
-                        Err(e) => {
-                            *ptr3.add(0).cast::<u8>() = (1i32) as u8;
-                            match e {
-                                MkError::InvalidCodec(e) => {
-                                    *ptr3.add(4).cast::<u8>() = (0i32) as u8;
-                                    let vec5 = (e.into_bytes()).into_boxed_slice();
-                                    let ptr5 = vec5.as_ptr().cast::<u8>();
-                                    let len5 = vec5.len();
-                                    ::core::mem::forget(vec5);
-                                    *ptr3.add(12).cast::<usize>() = len5;
-                                    *ptr3.add(8).cast::<*mut u8>() = ptr5.cast_mut();
-                                }
-                                MkError::WalletUninitialized => {
-                                    *ptr3.add(4).cast::<u8>() = (1i32) as u8;
-                                }
-                                MkError::MultikeyError(e) => {
-                                    *ptr3.add(4).cast::<u8>() = (2i32) as u8;
-                                    let vec6 = (e.into_bytes()).into_boxed_slice();
-                                    let ptr6 = vec6.as_ptr().cast::<u8>();
-                                    let len6 = vec6.len();
-                                    ::core::mem::forget(vec6);
-                                    *ptr3.add(12).cast::<usize>() = len6;
-                                    *ptr3.add(8).cast::<*mut u8>() = ptr6.cast_mut();
-                                }
-                                MkError::KeyNotFound(e) => {
-                                    *ptr3.add(4).cast::<u8>() = (3i32) as u8;
-                                    let vec7 = (e.into_bytes()).into_boxed_slice();
-                                    let ptr7 = vec7.as_ptr().cast::<u8>();
-                                    let len7 = vec7.len();
-                                    ::core::mem::forget(vec7);
-                                    *ptr3.add(12).cast::<usize>() = len7;
-                                    *ptr3.add(8).cast::<*mut u8>() = ptr7.cast_mut();
-                                }
-                            }
-                        }
-                    };
-                    ptr3
-                }
-                #[doc(hidden)]
-                #[allow(non_snake_case)]
-                pub unsafe fn __post_return_prove<T: Guest>(arg0: *mut u8) {
-                    let l0 = i32::from(*arg0.add(0).cast::<u8>());
-                    match l0 {
-                        0 => {
-                            let l1 = *arg0.add(4).cast::<*mut u8>();
-                            let l2 = *arg0.add(8).cast::<usize>();
-                            let base3 = l1;
-                            let len3 = l2;
-                            _rt::cabi_dealloc(base3, len3 * 1, 1);
-                        }
-                        _ => {
-                            let l4 = i32::from(*arg0.add(4).cast::<u8>());
-                            match l4 {
-                                0 => {
-                                    let l5 = *arg0.add(8).cast::<*mut u8>();
-                                    let l6 = *arg0.add(12).cast::<usize>();
-                                    _rt::cabi_dealloc(l5, l6, 1);
-                                }
-                                1 => {}
-                                2 => {
-                                    let l7 = *arg0.add(8).cast::<*mut u8>();
-                                    let l8 = *arg0.add(12).cast::<usize>();
-                                    _rt::cabi_dealloc(l7, l8, 1);
-                                }
-                                _ => {
-                                    let l9 = *arg0.add(8).cast::<*mut u8>();
-                                    let l10 = *arg0.add(12).cast::<usize>();
-                                    _rt::cabi_dealloc(l9, l10, 1);
-                                }
-                            }
-                        }
-                    }
-                }
-                #[doc(hidden)]
-                #[allow(non_snake_case)]
-                pub unsafe fn _export_unlocked_cabi<T: Guest>() -> i32 {
-                    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
-                    let result0 = T::unlocked();
-                    match result0 {
-                        true => 1,
-                        false => 0,
                     }
                 }
                 pub trait Guest {
-                    /// loads just the XML like markdown
+                    /// loads just the RDX for rendering
                     fn load() -> _rt::String;
-                    /// create a seed and lock it
-                    fn create(username: _rt::String, password: _rt::String);
-                    /// Unlock an existing encrypted seed
-                    fn unlock(
-                        username: _rt::String,
-                        password: _rt::String,
-                        encrypted_seed: _rt::String,
-                    );
-                    /// Gets the Multikey
-                    fn get_mk(args: KeyArgs) -> Result<_rt::Vec<u8>, MkError>;
-                    /// Proves the data for the given Multikey.
-                    fn prove(args: ProveArgs) -> Result<_rt::Vec<u8>, MkError>;
-                    /// Returns whether the wallet is unlocked or not
-                    fn unlocked() -> bool;
+                    /// search for a peer by VLAD
+                    fn search(vlad: _rt::String) -> Result<_rt::String, _rt::String>;
                 }
                 #[doc(hidden)]
                 macro_rules! __export_component_plugin_run_cabi {
@@ -1352,41 +1078,20 @@ pub mod exports {
                         = "cabi_post_component:plugin/run#load"] unsafe extern "C" fn
                         _post_return_load(arg0 : * mut u8,) { $($path_to_types)*::
                         __post_return_load::<$ty > (arg0) } #[export_name =
-                        "component:plugin/run#create"] unsafe extern "C" fn
-                        export_create(arg0 : * mut u8, arg1 : usize, arg2 : * mut u8,
-                        arg3 : usize,) { $($path_to_types)*:: _export_create_cabi::<$ty >
-                        (arg0, arg1, arg2, arg3) } #[export_name =
-                        "component:plugin/run#unlock"] unsafe extern "C" fn
-                        export_unlock(arg0 : * mut u8, arg1 : usize, arg2 : * mut u8,
-                        arg3 : usize, arg4 : * mut u8, arg5 : usize,) {
-                        $($path_to_types)*:: _export_unlock_cabi::<$ty > (arg0, arg1,
-                        arg2, arg3, arg4, arg5) } #[export_name =
-                        "component:plugin/run#get-mk"] unsafe extern "C" fn
-                        export_get_mk(arg0 : * mut u8, arg1 : usize, arg2 : * mut u8,
-                        arg3 : usize, arg4 : i32, arg5 : i32,) -> * mut u8 {
-                        $($path_to_types)*:: _export_get_mk_cabi::<$ty > (arg0, arg1,
-                        arg2, arg3, arg4, arg5) } #[export_name =
-                        "cabi_post_component:plugin/run#get-mk"] unsafe extern "C" fn
-                        _post_return_get_mk(arg0 : * mut u8,) { $($path_to_types)*::
-                        __post_return_get_mk::<$ty > (arg0) } #[export_name =
-                        "component:plugin/run#prove"] unsafe extern "C" fn
-                        export_prove(arg0 : * mut u8, arg1 : usize, arg2 : * mut u8, arg3
-                        : usize,) -> * mut u8 { $($path_to_types)*::
-                        _export_prove_cabi::<$ty > (arg0, arg1, arg2, arg3) }
-                        #[export_name = "cabi_post_component:plugin/run#prove"] unsafe
-                        extern "C" fn _post_return_prove(arg0 : * mut u8,) {
-                        $($path_to_types)*:: __post_return_prove::<$ty > (arg0) }
-                        #[export_name = "component:plugin/run#unlocked"] unsafe extern
-                        "C" fn export_unlocked() -> i32 { $($path_to_types)*::
-                        _export_unlocked_cabi::<$ty > () } };
+                        "component:plugin/run#search"] unsafe extern "C" fn
+                        export_search(arg0 : * mut u8, arg1 : usize,) -> * mut u8 {
+                        $($path_to_types)*:: _export_search_cabi::<$ty > (arg0, arg1) }
+                        #[export_name = "cabi_post_component:plugin/run#search"] unsafe
+                        extern "C" fn _post_return_search(arg0 : * mut u8,) {
+                        $($path_to_types)*:: __post_return_search::<$ty > (arg0) } };
                     };
                 }
                 #[doc(hidden)]
                 pub(crate) use __export_component_plugin_run_cabi;
                 #[repr(align(4))]
-                struct _RetArea([::core::mem::MaybeUninit<u8>; 16]);
+                struct _RetArea([::core::mem::MaybeUninit<u8>; 12]);
                 static mut _RET_AREA: _RetArea = _RetArea(
-                    [::core::mem::MaybeUninit::uninit(); 16],
+                    [::core::mem::MaybeUninit::uninit(); 12],
                 );
             }
         }
@@ -1500,7 +1205,7 @@ mod _rt {
 /// ```
 #[allow(unused_macros)]
 #[doc(hidden)]
-macro_rules! __export_plugin_world_impl {
+macro_rules! __export_example_impl {
     ($ty:ident) => {
         self::export!($ty with_types_in self);
     };
@@ -1511,12 +1216,12 @@ macro_rules! __export_plugin_world_impl {
     };
 }
 #[doc(inline)]
-pub(crate) use __export_plugin_world_impl as export;
+pub(crate) use __export_example_impl as export;
 #[cfg(target_arch = "wasm32")]
-#[link_section = "component-type:wit-bindgen:0.35.0:component:plugin:plugin-world:encoded world"]
+#[link_section = "component-type:wit-bindgen:0.35.0:component:plugin:example:encoded world"]
 #[doc(hidden)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 1658] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xf7\x0b\x01A\x02\x01\
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 1362] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xd4\x09\x01A\x02\x01\
 A\x0d\x01B\x0e\x01r\x02\x04names\x05values\x04\0\x0cstring-event\x03\0\0\x01p}\x01\
 r\x02\x04names\x05value\x02\x04\0\x0bbytes-event\x03\0\x03\x01ps\x01r\x02\x04nam\
 es\x05value\x05\x04\0\x11string-list-event\x03\0\x06\x01q\x03\x04text\x01\x01\0\x05\
@@ -1543,18 +1248,11 @@ error\x01s\0\x0dkey-not-found\x01s\0\x04\0\x08mk-error\x03\0\x0a\x01@\x01\x03evt
 @\0\0}\x04\0\x0brandom-byte\x01\x0e\x01p}\x01j\x01\x0f\x01\x0b\x01@\x01\x04args\x03\
 \0\x10\x04\0\x06get-mk\x01\x11\x01@\x01\x04args\x05\0\x10\x04\0\x05prove\x01\x12\
 \x01@\x01\x05order\x07\x01\0\x04\0\x05order\x01\x13\x01@\0\0s\x04\0\x09get-scope\
-\x01\x14\x03\0\x13host:component/host\x05\x07\x01B\x16\x02\x03\x02\x01\x02\x04\0\
-\x05event\x03\0\0\x02\x03\x02\x01\x03\x04\0\x08key-args\x03\0\x02\x01q\x04\x0din\
-valid-codec\x01s\0\x14wallet-uninitialized\0\0\x0emultikey-error\x01s\0\x0dkey-n\
-ot-found\x01s\0\x04\0\x08mk-error\x03\0\x04\x01p}\x01r\x02\x02mk\x06\x04data\x06\
-\x04\0\x0aprove-args\x03\0\x07\x01@\0\0s\x04\0\x04load\x01\x09\x01@\x02\x08usern\
-ames\x08passwords\x01\0\x04\0\x06create\x01\x0a\x01@\x03\x08usernames\x08passwor\
-ds\x0eencrypted-seeds\x01\0\x04\0\x06unlock\x01\x0b\x01j\x01\x06\x01\x05\x01@\x01\
-\x04args\x03\0\x0c\x04\0\x06get-mk\x01\x0d\x01@\x01\x04args\x08\0\x0c\x04\0\x05p\
-rove\x01\x0e\x01@\0\0\x7f\x04\0\x08unlocked\x01\x0f\x04\0\x14component:plugin/ru\
-n\x05\x08\x04\0\x1dcomponent:plugin/plugin-world\x04\0\x0b\x12\x01\0\x0cplugin-w\
-orld\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.220.0\
-\x10wit-bindgen-rust\x060.35.0";
+\x01\x14\x03\0\x13host:component/host\x05\x07\x01B\x05\x01@\0\0s\x04\0\x04load\x01\
+\0\x01j\x01s\x01s\x01@\x01\x04vlads\0\x01\x04\0\x06search\x01\x02\x04\0\x14compo\
+nent:plugin/run\x05\x08\x04\0\x18component:plugin/example\x04\0\x0b\x0d\x01\0\x07\
+example\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.22\
+0.0\x10wit-bindgen-rust\x060.35.0";
 #[inline(never)]
 #[doc(hidden)]
 pub fn __link_custom_section_describing_imports() {

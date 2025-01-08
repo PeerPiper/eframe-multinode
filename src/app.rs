@@ -2,10 +2,6 @@ mod error;
 mod file_dialog;
 mod platform;
 mod rdx_runner;
-//mod widgets;
-
-#[cfg(target_arch = "wasm32")]
-pub use peerpiper::core::Cid;
 
 pub(crate) use platform::Platform;
 use platform::Settings;
@@ -120,7 +116,7 @@ impl eframe::App for MultinodeApp {
             });
 
             // Show plugins
-            let RdxRunner { plugins } = &mut self.platform.rdx_runner;
+            let RdxRunner { plugins, .. } = &mut self.platform.rdx_runner;
             for (_name, plugin) in plugins.iter_mut() {
                 plugin.render_rhai(ctx.clone());
             }

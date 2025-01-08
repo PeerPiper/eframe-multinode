@@ -7,7 +7,7 @@ version = "0.1.2"
 authors = ["Doug Anderson <doug@peerpiper.io>"]
 edition = "2021"
 include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
-rust-version = "1.80"
+rust-version = "1.83"
 description = "A PeerPiper multi-node application built using egui and efrem that runs in the browser and desktop."
 default-run = "eframe-multinode"
 
@@ -31,7 +31,7 @@ log = "0.4"
 
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
-tracing = { version = "0.1" }
+tracing = { version = "0.1", features = ["log"] }
 seed-keeper-core = { git = "https://github.com/DougAnderson444/seed-keeper.git" }
 egui_material_icons = "0.1.0"
 cloudflare = { version = "0.12.0", git = "https://github.com/cloudflare/cloudflare-rs.git" }
@@ -51,6 +51,8 @@ futures = "0.3"
 peerpiper = { git = "https://github.com/PeerPiper/peerpiper.git" }
 serde_json = "1.0"
 chrono = "0.4"
+blockstore = "0.7.1"
+cid = "0.11.1"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -66,6 +68,7 @@ tokio = { version = "1", features = [
 peerpiper-plugins = { git = "https://github.com/PeerPiper/peerpiper.git" }
 peerpiper-native = { git = "https://github.com/PeerPiper/peerpiper.git" }
 rfd = "0.15" # Rust File Dialog 
+parking_lot = "0.12" # for better Mutex
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -89,7 +92,7 @@ gloo-timers = { version = "0.3.0", features = ["futures"] }
 
 [build-dependencies]
 wasmparser = "0.221"
-rdx = { git = "https://github.com/DougAnderson444/rdx.git" }
+# rdx = { git = "https://github.com/DougAnderson444/rdx.git" }
 
 [profile.release]
 opt-level = 2 # fast and small wasm
@@ -98,7 +101,18 @@ opt-level = 2 # fast and small wasm
 [profile.dev.package."*"]
 opt-level = 2
 
+
 [patch.crates-io]
+
+# patch peerpiper-plugins = { git = "https://github.com/PeerPiper/peerpiper.git" } 
+[patch.'https://github.com/PeerPiper/peerpiper.git']
+peerpiper-plugins = { path = "../peerpiper/crates/peerpiper-plugins" }
+peerpiper = { path = "../peerpiper/crates/peerpiper" }
+peerpiper-native = { path = "../peerpiper/crates/peerpiper-native" }
+peerpiper-browser = { path = "../peerpiper/crates/peerpiper-browser" }
+
+[patch.'https://github.com/DougAnderson444/rdx.git']
+rdx = { path = "../rdx" }
 # If you want to use the bleeding edge version of egui and eframe:
 # egui = { git = "https://github.com/emilk/egui", branch = "master" }
 # eframe = { git = "https://github.com/emilk/egui", branch = "master" }

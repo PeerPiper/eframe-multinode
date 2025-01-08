@@ -2,7 +2,7 @@
 //! so that the [rdx::layer::rhai::Scope] can be serialized and deserialized.
 use crate::app::platform;
 use crate::app::platform::StringStore;
-use crate::app::rdx_runner::CommanderCounter;
+use crate::app::rdx_runner::PeerPiperWired;
 use gloo_timers::callback::Timeout;
 use peerpiper::core::events::AllCommands;
 use peerpiper::core::events::SystemCommand;
@@ -17,7 +17,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 /// Serializable [State] struct that holds the [Scope] and [egui::Context]
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 //#[serde(default)]
 pub struct State {
     inner: SendWrapper<InnerState>,
@@ -31,16 +31,19 @@ impl Default for State {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Default)]
 struct InnerState {
     /// The unique name of this plugin, typically the filename
     name: String,
-    /// The [Scope] that holds the state of the plugin
+    /// The reference counted [Scope] that holds the state of the plugin.
+    ///
+    /// Scope needs to be Rc<RefCell<Scope>> because we need to be able to clone the state
+    /// and pass it into an async task in order to be initialized.
     scope: Rc<RefCell<Scope<'static>>>,
     /// The [egui::Context] that holds the UI state. Used to request repaints
     egui_ctx: Option<egui::Context>,
     /// Handler to PeerPiper SystemCommander
-    commander: CommanderCounter,
+    peerpiper: PeerPiperWired,
     /// String Store map the name of the plugin to the CID of the state
     cid_map: StringStore,
     /// Debouncing mechanism to save the state but workaround many requests at once
@@ -55,7 +58,7 @@ impl State {
     pub fn new(
         name: impl AsRef<str> + Clone,
         ctx: Option<egui::Context>,
-        commander: CommanderCounter,
+        peerpiper: PeerPiperWired,
     ) -> Self {
         let scope = Rc::new(RefCell::new(Scope::new()));
 
@@ -66,7 +69,7 @@ impl State {
                 scope,
                 egui_ctx: ctx,
                 name: name.clone().as_ref().to_string(),
-                commander,
+                peerpiper,
                 cid_map,
                 timer: Rc::new(RefCell::new(None)),
             }),
@@ -76,26 +79,26 @@ impl State {
     /// Initialize the state with a scope from storage, if it exists.
     /// Same steps as in new(), but using self.* instead.
     pub fn init(&self) {
-        log::debug!("State::init() called");
+        tracing::debug!("State::init() called for {:?}", self.inner.name);
         let scope_clone = self.inner.scope.clone();
         if let Some(key) = self.inner.cid_map.get_string(&self.inner.name) {
             if let Ok(cid) = Cid::try_from(key.clone()) {
-                let commander_clone = self.inner.commander.clone();
+                if self.inner.peerpiper.borrow().is_none() {
+                    tracing::warn!("Failed to get PeerPiper from State");
+                    return;
+                };
+
+                let piper_clone = self.inner.peerpiper.clone();
 
                 platform::spawn(async move {
                     let pp = {
-                        log::info!("Borrow mut in init");
-                        let binding = commander_clone.borrow();
-                        let Some(ref mut commander) = binding.as_ref() else {
-                            log::warn!("INIT: Commander is not set yet");
-                            return;
-                        };
+                        tracing::info!("Borrow mut in init");
                         let command = AllCommands::System(SystemCommand::Get { key: cid.into() });
-                        commander.order(command).await
+                        piper_clone.borrow().as_ref().unwrap().order(command).await
                     };
 
                     let Ok(ReturnValues::Data(bytes)) = pp else {
-                        log::warn!("Failed to get state from CID: {}", key);
+                        tracing::warn!("Failed to get state from CID: {}", key);
                         return;
                     };
 
@@ -106,10 +109,16 @@ impl State {
                         return;
                     };
 
+                    // set the plugin scope to the loaded scope,
+                    // this is how we load the state from disk into the plugin
                     *scope_clone.borrow_mut() = scope;
-                    //log::info!("*** State loaded from commander: {:?}", scope_clone);
+                    //tracing::info!("*** State loaded from commander: {:?}", scope_clone);
                 });
+            } else {
+                tracing::warn!("Failed to parse CID from string: {}", key);
             }
+        } else {
+            tracing::warn!("No state found for {:?}", self.inner.name);
         }
     }
 
@@ -127,15 +136,16 @@ impl State {
 
         // Save the serialized state to disk, independent of the platform
         // for this we can use peerpiper SystemCommandHanlder to put the bytes into the local system
-        log::info!("borrow_mut in state.save()");
-        let binding = self.inner.commander.borrow();
-        let Some(cmdr) = binding.as_ref() else {
-            log::warn!("Save: Commander is not set yet");
-            return Err(anyhow::anyhow!("Anyhow Save: Commander is not set yet"))?;
+        let binding = self.inner.peerpiper.borrow();
+        let Some(pipr) = binding.as_ref() else {
+            tracing::warn!("Save: PeerPiper is not ready yet");
+            return Err(anyhow::anyhow!(
+                "Anyhow Save: PeerPiper Commander is not set yet"
+            ))?;
         };
 
         let command = AllCommands::System(SystemCommand::Put { bytes });
-        let Ok(ReturnValues::ID(cid)) = cmdr.order(command).await else {
+        let Ok(ReturnValues::ID(cid)) = pipr.order(command).await else {
             return Err(anyhow::anyhow!("Failed to order command: Put"))?;
         };
 
@@ -153,22 +163,22 @@ impl State {
 
 impl Inner for State {
     /// Updates the scope variable to the given value
-    fn update(&mut self, key: &str, value: impl Into<Dynamic> + Copy) {
-        self.inner.scope.borrow_mut().set_or_push(key, value.into());
+    fn update(&mut self, key: &str, value: impl Into<Dynamic> + Clone) {
+        self.inner.scope.borrow_mut().set_value(key, value.into());
 
         if let Some(egui_ctx) = &self.inner.egui_ctx {
-            log::info!("Requesting repaint");
+            tracing::info!("Requesting repaint");
             egui_ctx.request_repaint();
             // now that the rhai scope has been updated, we need to re-run
         } else {
-            log::warn!("Egui context is not set");
+            tracing::warn!("Egui context is not set");
         }
 
         // Debounce the save operation by pushing the save time into the save_after field
         // and then spawning a task to save the state after the debounce time
         let self_clone = self.clone(); // our save() function lives here
         let timer = self.inner.timer.clone();
-        let delay = 5u32;
+        let delay = 750u32; // ms
 
         if let Some(t) = timer.borrow_mut().take() {
             t.cancel();
@@ -176,9 +186,9 @@ impl Inner for State {
 
         let new_timer = Timeout::new(delay, || {
             platform::spawn(async move {
-                log::info!("Saving state after gloo_timer");
+                tracing::info!("Saving state after gloo_timer");
                 let cid = self_clone.save().await;
-                log::info!("State saved to CID: {:?}", cid);
+                tracing::info!("State saved to CID: {:?}", cid);
             });
         });
 
@@ -186,17 +196,17 @@ impl Inner for State {
     }
 
     fn scope(&self) -> ScopeRef {
-        ScopeRef::Refcell(self.inner.scope.borrow())
+        ScopeRef::Refcell(self.inner.scope.clone())
     }
 
     fn scope_mut(&mut self) -> ScopeRefMut {
         ScopeRefMut::Refcell(self.inner.scope.borrow_mut())
     }
 
-    // into_scope with 'static lifetime'
+    // into_scope with 'static lifetime
     fn into_scope(self) -> Scope<'static> {
         // return a copy of the scope
-        self.inner.scope.borrow().clone()
+        self.inner.scope.borrow().clone() // creates a completely new copy of the inner data
     }
 }
 

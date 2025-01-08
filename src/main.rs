@@ -7,7 +7,9 @@
 #[tokio::main]
 async fn main() -> eframe::Result {
     let _ = tracing_subscriber::fmt()
-        .with_env_filter("eframe_multinode=debug,rdx=debug")
+        .with_env_filter(
+            "eframe_multinode=debug,rdx=debug,peerpiper_*=trace,peerpiper_core=trace,peerpiper_native=debug,cranelift_codegen=off,beetswap=trace",
+        )
         .try_init();
 
     tracing::info!("Starting eframe multinode");
@@ -36,9 +38,9 @@ fn main() {
     use eframe::wasm_bindgen::JsCast as _;
 
     // Redirect `log` message to `console.log` and friends:
-    eframe::WebLogger::init(log::LevelFilter::Debug).ok();
+    eframe::WebLogger::init(log::LevelFilter::Info).ok();
 
-    log::info!("Starting eframe multinode");
+    tracing::info!("Starting eframe multinode");
 
     let web_options = eframe::WebOptions::default();
 

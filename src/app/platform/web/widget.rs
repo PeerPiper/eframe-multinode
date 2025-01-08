@@ -34,7 +34,7 @@ pub async fn fetch_dns_query(domain: String) -> Result<Vec<String>, JsValue> {
     let json = JsFuture::from(resp.json()?).await?;
     let multiaddrs: DnsTXTQuery = serde_wasm_bindgen::from_value(json)?;
 
-    log::debug!("multiaddrs: {:?}", multiaddrs);
+    tracing::debug!("multiaddrs: {:?}", multiaddrs);
 
     let multiaddrs: Vec<String> = multiaddrs
         .answer

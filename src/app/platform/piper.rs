@@ -1,35 +1,50 @@
 //! The PeerPiper Command sender for the Browser
 #![allow(dead_code)]
 
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+
 use super::platform::Error;
 use crate::app::platform;
 use crate::app::platform::platform::Blockstore;
-use futures::SinkExt;
+use crate::app::rdx_runner::{LayerPlugin, State};
+
 use futures::{
     channel::{
-        mpsc::{self, Sender},
+        mpsc::{self},
         oneshot,
     },
     StreamExt,
 };
+
 pub use peerpiper::core::events::AllCommands;
+use peerpiper::core::events::Events;
 use peerpiper::core::events::PublicEvent;
+use peerpiper::core::libp2p::api::Libp2pEvent;
 pub use peerpiper::core::Commander;
 pub use peerpiper::core::ReturnValues;
+use rdx::layer::{Instantiator as _, List, ListType, RecordType, Value, ValueType};
+use tokio::sync::mpsc::Sender;
 
-#[derive(Debug, Clone)]
+/// Simplify the plugins signature type with alias
+pub type Plugins = Arc<Mutex<HashMap<String, Arc<Mutex<LayerPlugin<State>>>>>>;
+
+#[derive(Clone)]
 pub struct PeerPiper {
-    // / Make interior mutability possible for the Commander struct with [RefCell]
-    // / This way we can keep the idiomatic Rust way of borrowing and mutating with &self
-    commander: Commander<Blockstore>,
+    pub commander: Commander<Blockstore>,
+    /// The collection of plugins
+    pub plugins: Plugins,
 }
 
 impl PeerPiper {
     /// Crate a new PeerPiper instanc ewith the given struct which impls both
-    /// [peerpiper::core::wnfs_common::blockstore::BlockStore] and [SystemCommandHandler]
-    pub fn new(handler: Blockstore) -> PeerPiper {
-        let commander = Commander::new(handler);
-        Self { commander }
+    /// [peerpiper::core::Blockstore] and
+    pub fn new(blockstore: Blockstore, arc_collection: Plugins) -> PeerPiper {
+        let commander = Commander::new(blockstore);
+        Self {
+            commander,
+            plugins: arc_collection,
+        }
     }
 
     /// Send Commands to PeerPiper whether connected or not.
@@ -46,8 +61,7 @@ impl PeerPiper {
     pub async fn connect(
         &mut self,
         libp2p_endpoints: Vec<String>,
-        mut on_event: Sender<PublicEvent>,
-    ) -> Result<(), Error> {
+    ) -> Result<impl FnOnce(Sender<PublicEvent>), Error> {
         // 16 is arbitrary, but should be enough for now
         let (tx_evts, mut rx_evts) = mpsc::channel(16);
 
@@ -58,12 +72,15 @@ impl PeerPiper {
         // so we will need to wrap it in a Mutex or something to make it thread safe.
         let (network_command_sender, network_command_receiver) = tokio::sync::mpsc::channel(8);
 
+        let bstore = self.commander.blockstore.clone();
+
         platform::spawn(async move {
             peerpiper::start(
                 tx_evts,
                 network_command_receiver,
                 tx_client,
                 libp2p_endpoints,
+                bstore,
             )
             .await
             .expect("never end")
@@ -76,13 +93,113 @@ impl PeerPiper {
             .with_network(network_command_sender)
             .with_client(client_handle);
 
-        while let Some(event) = rx_evts.next().await {
-            if let peerpiper::core::events::Events::Outer(event) = event {
-                log::debug!("[Browser] Received event: {:?}", &event);
-                on_event.send(event).await?;
-            }
-        }
+        // enable caller to Start listening for events from the network and handle them.
+        // Any [Libp2pEvent] received will be handled by the plugins.
+        // Any [PublicEvent] received will be sent to the `on_event` callback.
+        let plugins = self.plugins.clone();
+        let listen = |on_event: Sender<PublicEvent>| {
+            platform::spawn(async move {
+                while let Some(event) = rx_evts.next().await {
+                    match event {
+                        // Outter/Public events are not handled by plugins
+                        Events::Outer(public_event) => {
+                            tracing::debug!("Received event: {:?}", &public_event);
+                            on_event.send(public_event).await.unwrap();
+                        }
+                        // Inner events are events that can be handled by plugins
+                        Events::Inner(libp2p_evt) => {
+                            tracing::debug!("Received inner libp2p event: {:?}", &libp2p_evt);
+                            match libp2p_evt {
+                                Libp2pEvent::InboundRequest {
+                                    request,
+                                    channel: _,
+                                } => {
+                                    tracing::debug!("Received inbound request: {:?}", &request);
+                                }
+                                Libp2pEvent::DhtProviderRequest { key: _, channel: _ } => todo!(),
+                                Libp2pEvent::PutRecordRequest { source, record } => {
+                                    tracing::info!("Received PutRecordRequest from: {:?}", &source);
+                                    // need a connection to the list of plugins, which
+                                    // are located in RDXRunner.
+                                    let list_data = ValueType::List(ListType::new(ValueType::U8));
 
-        Ok(())
+                                    let key = Value::List(
+                                        List::new(
+                                            ListType::new(ValueType::U8),
+                                            record
+                                                .key
+                                                .to_vec()
+                                                .iter()
+                                                .map(|u| Value::U8(*u))
+                                                .collect::<Vec<_>>(),
+                                        )
+                                        .unwrap(),
+                                    );
+
+                                    let value = Value::List(
+                                        List::new(
+                                            ListType::new(ValueType::U8),
+                                            record
+                                                .value
+                                                .iter()
+                                                .map(|u| Value::U8(*u))
+                                                .collect::<Vec<_>>(),
+                                        )
+                                        .unwrap(),
+                                    );
+
+                                    let peer = Value::List(
+                                        List::new(
+                                            ListType::new(ValueType::U8),
+                                            source
+                                                .to_bytes()
+                                                .to_vec()
+                                                .iter()
+                                                .map(|u| Value::U8(*u))
+                                                .collect::<Vec<_>>(),
+                                        )
+                                        .unwrap(),
+                                    );
+
+                                    let values =
+                                        vec![("key", key), ("value", value), ("peer", peer)];
+
+                                    let kad_record = rdx::layer::Value::Record(
+                                        rdx::wasm_component_layer::Record::new(
+                                            RecordType::new(
+                                                None,
+                                                vec![
+                                                    ("key", list_data.clone()),
+                                                    ("value", list_data.clone()),
+                                                    ("peer", list_data.clone()),
+                                                ],
+                                            )
+                                            .unwrap(),
+                                            values,
+                                        )
+                                        .unwrap(),
+                                    );
+                                    plugins.lock().unwrap().iter().for_each(|(name, plugin)| {
+                                        tracing::debug!(
+                                            "Calling handle-put-record-request with plugin: {:?}",
+                                            name
+                                        );
+                                        let mut plugin_deets = plugin.lock().unwrap();
+                                        if let Err(e) = plugin_deets.call(
+                                            "handle-put-record-request",
+                                            &[kad_record.clone()],
+                                        ) {
+                                            tracing::error!("Error calling plugin: {:?}", e);
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        Ok(listen)
     }
 }

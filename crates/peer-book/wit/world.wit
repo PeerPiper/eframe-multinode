@@ -1,0 +1,17 @@
+package component:plugin;
+
+interface run {
+  
+  /// loads just the RDX for rendering
+  load: func() -> string;
+
+  /// search for a peer by VLAD
+  search: func(vlad: string) -> result<string, string>;
+}
+/// An example world for the component to target.
+world example {
+  
+  import host:component/host;
+
+  export run;
+}
