@@ -85,8 +85,6 @@ pub(crate) struct Platform {
     addr: Arc<Mutex<Option<Multiaddr>>>,
 
     pub rdx_runner: RdxRunner,
-    ///// PeerPiper gives us access to the netowrk, storage, and plugins
-    //pub peerpiper: Arc<AsyncMutex<PeerPiper>>,
 }
 
 impl Default for Platform {
@@ -189,7 +187,7 @@ impl Default for Platform {
             }
         });
 
-        let rdx_runner = RdxRunner::new(peerpiper.clone(), None);
+        let rdx_runner = RdxRunner::new(peerpiper, None);
 
         Self {
             log,
@@ -197,7 +195,6 @@ impl Default for Platform {
             addr,
             loader: Loader,
             rdx_runner,
-            //peerpiper,
         }
     }
 }
