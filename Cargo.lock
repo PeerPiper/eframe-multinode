@@ -6022,7 +6022,7 @@ dependencies = [
 [[package]]
 name = "peerpiper"
 version = "0.2.0"
-source = "git+https://github.com/PeerPiper/peerpiper.git#0f44214ed6d874c75e8c3d9cf335ae2b17653772"
+source = "git+https://github.com/PeerPiper/peerpiper.git#f9ec456bd87bb762874776586844e8bfe62801c9"
 dependencies = [
  "cfg-if",
  "futures",
@@ -6037,7 +6037,7 @@ dependencies = [
 [[package]]
 name = "peerpiper-browser"
 version = "0.1.8"
-source = "git+https://github.com/PeerPiper/peerpiper.git#0f44214ed6d874c75e8c3d9cf335ae2b17653772"
+source = "git+https://github.com/PeerPiper/peerpiper.git#f9ec456bd87bb762874776586844e8bfe62801c9"
 dependencies = [
  "anyhow",
  "blockstore",
@@ -6070,7 +6070,7 @@ dependencies = [
 [[package]]
 name = "peerpiper-core"
 version = "0.3.0"
-source = "git+https://github.com/PeerPiper/peerpiper.git#0f44214ed6d874c75e8c3d9cf335ae2b17653772"
+source = "git+https://github.com/PeerPiper/peerpiper.git#f9ec456bd87bb762874776586844e8bfe62801c9"
 dependencies = [
  "base64 0.20.0",
  "beetswap",
@@ -6099,7 +6099,7 @@ dependencies = [
 [[package]]
 name = "peerpiper-native"
 version = "0.1.0"
-source = "git+https://github.com/PeerPiper/peerpiper.git#0f44214ed6d874c75e8c3d9cf335ae2b17653772"
+source = "git+https://github.com/PeerPiper/peerpiper.git#f9ec456bd87bb762874776586844e8bfe62801c9"
 dependencies = [
  "anyhow",
  "blockstore",
@@ -6120,7 +6120,7 @@ dependencies = [
 [[package]]
 name = "peerpiper-plugins"
 version = "0.1.0"
-source = "git+https://github.com/PeerPiper/peerpiper.git#0f44214ed6d874c75e8c3d9cf335ae2b17653772"
+source = "git+https://github.com/PeerPiper/peerpiper.git#f9ec456bd87bb762874776586844e8bfe62801c9"
 dependencies = [
  "anyhow",
  "async-trait",
