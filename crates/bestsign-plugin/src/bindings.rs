@@ -130,6 +130,176 @@ pub mod host {
             }
         }
         #[allow(dead_code, clippy::all)]
+        pub mod peerpiper {
+            #[used]
+            #[doc(hidden)]
+            static __FORCE_SECTION_REF: fn() = super::super::super::__link_custom_section_describing_imports;
+            use super::super::super::_rt;
+            /// Publsih data to a topic
+            #[derive(Clone)]
+            pub struct Publish {
+                /// The topic
+                pub topic: _rt::String,
+                /// The data
+                pub data: _rt::Vec<u8>,
+            }
+            impl ::core::fmt::Debug for Publish {
+                fn fmt(
+                    &self,
+                    f: &mut ::core::fmt::Formatter<'_>,
+                ) -> ::core::fmt::Result {
+                    f.debug_struct("Publish")
+                        .field("topic", &self.topic)
+                        .field("data", &self.data)
+                        .finish()
+                }
+            }
+            #[derive(Clone)]
+            pub struct PutKeyed {
+                /// The key
+                pub key: _rt::Vec<u8>,
+                /// The value
+                pub value: _rt::Vec<u8>,
+            }
+            impl ::core::fmt::Debug for PutKeyed {
+                fn fmt(
+                    &self,
+                    f: &mut ::core::fmt::Formatter<'_>,
+                ) -> ::core::fmt::Result {
+                    f.debug_struct("PutKeyed")
+                        .field("key", &self.key)
+                        .field("value", &self.value)
+                        .finish()
+                }
+            }
+            #[derive(Clone)]
+            pub enum SystemCommand {
+                /// Put bytes on the local disk
+                Put(_rt::Vec<u8>),
+                /// Puts Keyed bytes into the local disk
+                PutKeyed(PutKeyed),
+                /// Get bytes from the local disk
+                Get(_rt::Vec<u8>),
+            }
+            impl ::core::fmt::Debug for SystemCommand {
+                fn fmt(
+                    &self,
+                    f: &mut ::core::fmt::Formatter<'_>,
+                ) -> ::core::fmt::Result {
+                    match self {
+                        SystemCommand::Put(e) => {
+                            f.debug_tuple("SystemCommand::Put").field(e).finish()
+                        }
+                        SystemCommand::PutKeyed(e) => {
+                            f.debug_tuple("SystemCommand::PutKeyed").field(e).finish()
+                        }
+                        SystemCommand::Get(e) => {
+                            f.debug_tuple("SystemCommand::Get").field(e).finish()
+                        }
+                    }
+                }
+            }
+            /// Make a Rwquest from a Peer
+            /// The request is encoded as a list of bytes
+            #[derive(Clone)]
+            pub struct PeerRequest {
+                /// The request
+                pub request: _rt::Vec<u8>,
+                /// The peer id
+                pub peer_id: _rt::String,
+            }
+            impl ::core::fmt::Debug for PeerRequest {
+                fn fmt(
+                    &self,
+                    f: &mut ::core::fmt::Formatter<'_>,
+                ) -> ::core::fmt::Result {
+                    f.debug_struct("PeerRequest")
+                        .field("request", &self.request)
+                        .field("peer-id", &self.peer_id)
+                        .finish()
+                }
+            }
+            /// Put bytes in the DHT
+            #[derive(Clone)]
+            pub struct PutRecord {
+                /// The key
+                pub key: _rt::Vec<u8>,
+                /// The value
+                pub value: _rt::Vec<u8>,
+            }
+            impl ::core::fmt::Debug for PutRecord {
+                fn fmt(
+                    &self,
+                    f: &mut ::core::fmt::Formatter<'_>,
+                ) -> ::core::fmt::Result {
+                    f.debug_struct("PutRecord")
+                        .field("key", &self.key)
+                        .field("value", &self.value)
+                        .finish()
+                }
+            }
+            #[derive(Clone)]
+            pub enum AllCommands {
+                /// Publish data to a topic
+                Publish(Publish),
+                /// Subscribe to a topic
+                Subscribe(_rt::String),
+                /// Unsubscribe from a topic
+                Unsubscribe(_rt::String),
+                /// System commands are a subset of [AllCommands] that do not go to the network, but come
+                /// from componets to direct the system to do something, like save bytes to a file.
+                System(SystemCommand),
+                /// Please peer, do something with this data and give me a response
+                PeerRequest(PeerRequest),
+                /// Puts a Record on the DHT, and optionally provides the data for Pinning
+                PutRecord(PutRecord),
+                /// Gets a Record from the DHT
+                GetRecord(_rt::Vec<u8>),
+                /// Gets the Providers of a Record on the DHT
+                GetProviders(_rt::Vec<u8>),
+                /// Start Providing a Record on the DHT
+                StartProviding(_rt::Vec<u8>),
+            }
+            impl ::core::fmt::Debug for AllCommands {
+                fn fmt(
+                    &self,
+                    f: &mut ::core::fmt::Formatter<'_>,
+                ) -> ::core::fmt::Result {
+                    match self {
+                        AllCommands::Publish(e) => {
+                            f.debug_tuple("AllCommands::Publish").field(e).finish()
+                        }
+                        AllCommands::Subscribe(e) => {
+                            f.debug_tuple("AllCommands::Subscribe").field(e).finish()
+                        }
+                        AllCommands::Unsubscribe(e) => {
+                            f.debug_tuple("AllCommands::Unsubscribe").field(e).finish()
+                        }
+                        AllCommands::System(e) => {
+                            f.debug_tuple("AllCommands::System").field(e).finish()
+                        }
+                        AllCommands::PeerRequest(e) => {
+                            f.debug_tuple("AllCommands::PeerRequest").field(e).finish()
+                        }
+                        AllCommands::PutRecord(e) => {
+                            f.debug_tuple("AllCommands::PutRecord").field(e).finish()
+                        }
+                        AllCommands::GetRecord(e) => {
+                            f.debug_tuple("AllCommands::GetRecord").field(e).finish()
+                        }
+                        AllCommands::GetProviders(e) => {
+                            f.debug_tuple("AllCommands::GetProviders").field(e).finish()
+                        }
+                        AllCommands::StartProviding(e) => {
+                            f.debug_tuple("AllCommands::StartProviding")
+                                .field(e)
+                                .finish()
+                        }
+                    }
+                }
+            }
+        }
+        #[allow(dead_code, clippy::all)]
         pub mod host {
             #[used]
             #[doc(hidden)]
@@ -138,6 +308,7 @@ pub mod host {
             pub type Event = super::super::super::host::component::types::Event;
             pub type KeyArgs = super::super::super::host::component::types::KeyArgs;
             pub type ProveArgs = super::super::super::host::component::types::ProveArgs;
+            pub type AllCommands = super::super::super::host::component::peerpiper::AllCommands;
             /// get-mk Error type
             #[derive(Clone)]
             pub enum MkError {
@@ -550,6 +721,262 @@ pub mod host {
                     }
                 }
             }
+            #[allow(unused_unsafe, clippy::all)]
+            /// Order PeerPiper to do something.
+            pub fn order(order: &AllCommands) {
+                unsafe {
+                    use super::super::super::host::component::peerpiper::AllCommands as V21;
+                    let (
+                        result22_0,
+                        result22_1,
+                        result22_2,
+                        result22_3,
+                        result22_4,
+                        result22_5,
+                    ) = match order {
+                        V21::Publish(e) => {
+                            let super::super::super::host::component::peerpiper::Publish {
+                                topic: topic0,
+                                data: data0,
+                            } = e;
+                            let vec1 = topic0;
+                            let ptr1 = vec1.as_ptr().cast::<u8>();
+                            let len1 = vec1.len();
+                            let vec2 = data0;
+                            let ptr2 = vec2.as_ptr().cast::<u8>();
+                            let len2 = vec2.len();
+                            (
+                                0i32,
+                                ptr1.cast_mut(),
+                                len1 as *mut u8,
+                                ptr2.cast_mut(),
+                                len2 as *mut u8,
+                                0usize,
+                            )
+                        }
+                        V21::Subscribe(e) => {
+                            let vec3 = e;
+                            let ptr3 = vec3.as_ptr().cast::<u8>();
+                            let len3 = vec3.len();
+                            (
+                                1i32,
+                                ptr3.cast_mut(),
+                                len3 as *mut u8,
+                                ::core::ptr::null_mut(),
+                                ::core::ptr::null_mut(),
+                                0usize,
+                            )
+                        }
+                        V21::Unsubscribe(e) => {
+                            let vec4 = e;
+                            let ptr4 = vec4.as_ptr().cast::<u8>();
+                            let len4 = vec4.len();
+                            (
+                                2i32,
+                                ptr4.cast_mut(),
+                                len4 as *mut u8,
+                                ::core::ptr::null_mut(),
+                                ::core::ptr::null_mut(),
+                                0usize,
+                            )
+                        }
+                        V21::System(e) => {
+                            use super::super::super::host::component::peerpiper::SystemCommand as V10;
+                            let (
+                                result11_0,
+                                result11_1,
+                                result11_2,
+                                result11_3,
+                                result11_4,
+                            ) = match e {
+                                V10::Put(e) => {
+                                    let vec5 = e;
+                                    let ptr5 = vec5.as_ptr().cast::<u8>();
+                                    let len5 = vec5.len();
+                                    (
+                                        0i32,
+                                        ptr5.cast_mut(),
+                                        len5,
+                                        ::core::ptr::null_mut(),
+                                        0usize,
+                                    )
+                                }
+                                V10::PutKeyed(e) => {
+                                    let super::super::super::host::component::peerpiper::PutKeyed {
+                                        key: key6,
+                                        value: value6,
+                                    } = e;
+                                    let vec7 = key6;
+                                    let ptr7 = vec7.as_ptr().cast::<u8>();
+                                    let len7 = vec7.len();
+                                    let vec8 = value6;
+                                    let ptr8 = vec8.as_ptr().cast::<u8>();
+                                    let len8 = vec8.len();
+                                    (1i32, ptr7.cast_mut(), len7, ptr8.cast_mut(), len8)
+                                }
+                                V10::Get(e) => {
+                                    let vec9 = e;
+                                    let ptr9 = vec9.as_ptr().cast::<u8>();
+                                    let len9 = vec9.len();
+                                    (
+                                        2i32,
+                                        ptr9.cast_mut(),
+                                        len9,
+                                        ::core::ptr::null_mut(),
+                                        0usize,
+                                    )
+                                }
+                            };
+                            (
+                                3i32,
+                                result11_0 as *mut u8,
+                                result11_1,
+                                result11_2 as *mut u8,
+                                result11_3,
+                                result11_4,
+                            )
+                        }
+                        V21::PeerRequest(e) => {
+                            let super::super::super::host::component::peerpiper::PeerRequest {
+                                request: request12,
+                                peer_id: peer_id12,
+                            } = e;
+                            let vec13 = request12;
+                            let ptr13 = vec13.as_ptr().cast::<u8>();
+                            let len13 = vec13.len();
+                            let vec14 = peer_id12;
+                            let ptr14 = vec14.as_ptr().cast::<u8>();
+                            let len14 = vec14.len();
+                            (
+                                4i32,
+                                ptr13.cast_mut(),
+                                len13 as *mut u8,
+                                ptr14.cast_mut(),
+                                len14 as *mut u8,
+                                0usize,
+                            )
+                        }
+                        V21::PutRecord(e) => {
+                            let super::super::super::host::component::peerpiper::PutRecord {
+                                key: key15,
+                                value: value15,
+                            } = e;
+                            let vec16 = key15;
+                            let ptr16 = vec16.as_ptr().cast::<u8>();
+                            let len16 = vec16.len();
+                            let vec17 = value15;
+                            let ptr17 = vec17.as_ptr().cast::<u8>();
+                            let len17 = vec17.len();
+                            (
+                                5i32,
+                                ptr16.cast_mut(),
+                                len16 as *mut u8,
+                                ptr17.cast_mut(),
+                                len17 as *mut u8,
+                                0usize,
+                            )
+                        }
+                        V21::GetRecord(e) => {
+                            let vec18 = e;
+                            let ptr18 = vec18.as_ptr().cast::<u8>();
+                            let len18 = vec18.len();
+                            (
+                                6i32,
+                                ptr18.cast_mut(),
+                                len18 as *mut u8,
+                                ::core::ptr::null_mut(),
+                                ::core::ptr::null_mut(),
+                                0usize,
+                            )
+                        }
+                        V21::GetProviders(e) => {
+                            let vec19 = e;
+                            let ptr19 = vec19.as_ptr().cast::<u8>();
+                            let len19 = vec19.len();
+                            (
+                                7i32,
+                                ptr19.cast_mut(),
+                                len19 as *mut u8,
+                                ::core::ptr::null_mut(),
+                                ::core::ptr::null_mut(),
+                                0usize,
+                            )
+                        }
+                        V21::StartProviding(e) => {
+                            let vec20 = e;
+                            let ptr20 = vec20.as_ptr().cast::<u8>();
+                            let len20 = vec20.len();
+                            (
+                                8i32,
+                                ptr20.cast_mut(),
+                                len20 as *mut u8,
+                                ::core::ptr::null_mut(),
+                                ::core::ptr::null_mut(),
+                                0usize,
+                            )
+                        }
+                    };
+                    #[cfg(target_arch = "wasm32")]
+                    #[link(wasm_import_module = "host:component/host")]
+                    extern "C" {
+                        #[link_name = "order"]
+                        fn wit_import(
+                            _: i32,
+                            _: *mut u8,
+                            _: *mut u8,
+                            _: *mut u8,
+                            _: *mut u8,
+                            _: usize,
+                        );
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    fn wit_import(
+                        _: i32,
+                        _: *mut u8,
+                        _: *mut u8,
+                        _: *mut u8,
+                        _: *mut u8,
+                        _: usize,
+                    ) {
+                        unreachable!()
+                    }
+                    wit_import(
+                        result22_0,
+                        result22_1,
+                        result22_2,
+                        result22_3,
+                        result22_4,
+                        result22_5,
+                    );
+                }
+            }
+            #[allow(unused_unsafe, clippy::all)]
+            /// -> return-values;
+            /// Gets the current rhai scope from the host, if available.
+            pub fn get_scope() -> _rt::String {
+                unsafe {
+                    #[repr(align(4))]
+                    struct RetArea([::core::mem::MaybeUninit<u8>; 8]);
+                    let mut ret_area = RetArea([::core::mem::MaybeUninit::uninit(); 8]);
+                    let ptr0 = ret_area.0.as_mut_ptr().cast::<u8>();
+                    #[cfg(target_arch = "wasm32")]
+                    #[link(wasm_import_module = "host:component/host")]
+                    extern "C" {
+                        #[link_name = "get-scope"]
+                        fn wit_import(_: *mut u8);
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    fn wit_import(_: *mut u8) {
+                        unreachable!()
+                    }
+                    wit_import(ptr0);
+                    let l1 = *ptr0.add(0).cast::<*mut u8>();
+                    let l2 = *ptr0.add(4).cast::<usize>();
+                    let len3 = l2;
+                    let bytes3 = _rt::Vec::from_raw_parts(l1.cast(), len3, len3);
+                    _rt::string_lift(bytes3)
+                }
+            }
         }
     }
 }
@@ -565,6 +992,24 @@ pub mod exports {
                 #[doc(hidden)]
                 static __FORCE_SECTION_REF: fn() = super::super::super::super::__link_custom_section_describing_imports;
                 use super::super::super::super::_rt;
+                #[derive(Clone)]
+                pub struct KadRecord {
+                    pub key: _rt::Vec<u8>,
+                    pub value: _rt::Vec<u8>,
+                    pub peer: _rt::Vec<u8>,
+                }
+                impl ::core::fmt::Debug for KadRecord {
+                    fn fmt(
+                        &self,
+                        f: &mut ::core::fmt::Formatter<'_>,
+                    ) -> ::core::fmt::Result {
+                        f.debug_struct("KadRecord")
+                            .field("key", &self.key)
+                            .field("value", &self.value)
+                            .field("peer", &self.peer)
+                            .finish()
+                    }
+                }
                 #[doc(hidden)]
                 #[allow(non_snake_case)]
                 pub unsafe fn _export_load_cabi<T: Guest>() -> *mut u8 {
@@ -585,6 +1030,12 @@ pub mod exports {
                     let l0 = *arg0.add(0).cast::<*mut u8>();
                     let l1 = *arg0.add(4).cast::<usize>();
                     _rt::cabi_dealloc(l0, l1, 1);
+                }
+                #[doc(hidden)]
+                #[allow(non_snake_case)]
+                pub unsafe fn _export_init_cabi<T: Guest>() {
+                    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
+                    T::init();
                 }
                 #[doc(hidden)]
                 #[allow(non_snake_case)]
@@ -645,15 +1096,41 @@ pub mod exports {
                         }
                     }
                 }
+                #[doc(hidden)]
+                #[allow(non_snake_case)]
+                pub unsafe fn _export_handle_put_record_request_cabi<T: Guest>(
+                    arg0: *mut u8,
+                    arg1: usize,
+                    arg2: *mut u8,
+                    arg3: usize,
+                    arg4: *mut u8,
+                    arg5: usize,
+                ) {
+                    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
+                    let len0 = arg1;
+                    let len1 = arg3;
+                    let len2 = arg5;
+                    T::handle_put_record_request(KadRecord {
+                        key: _rt::Vec::from_raw_parts(arg0.cast(), len0, len0),
+                        value: _rt::Vec::from_raw_parts(arg2.cast(), len1, len1),
+                        peer: _rt::Vec::from_raw_parts(arg4.cast(), len2, len2),
+                    });
+                }
                 pub trait Guest {
                     /// from ./deps/host.wit
                     /// use host:component/types.{event, key-args};
                     /// loads just the XML like markdown
+                    /// Mandatory function for all plugins.
                     fn load() -> _rt::String;
+                    /// Optional init function. Can be noop if no initialization is needed.
+                    /// otherwise, feel free to do something with the inital Scope here.
+                    fn init();
                     /// Creates a data provenance log, returns the serialized log.
                     fn create(lock: _rt::String, unlock: _rt::String) -> bool;
                     /// Re-export get-mk, so that the rhai script can check to see if we have an available Multikey to use
                     fn getmk() -> Option<_rt::Vec<u8>>;
+                    /// Handles a DHT PutRecord Request, orders PutRecord command if request meets this plugin's criteria.
+                    fn handle_put_record_request(value: KadRecord);
                 }
                 #[doc(hidden)]
                 macro_rules! __export_component_plugin_run_cabi {
@@ -664,7 +1141,9 @@ pub mod exports {
                         = "cabi_post_component:plugin/run#load"] unsafe extern "C" fn
                         _post_return_load(arg0 : * mut u8,) { $($path_to_types)*::
                         __post_return_load::<$ty > (arg0) } #[export_name =
-                        "component:plugin/run#create"] unsafe extern "C" fn
+                        "component:plugin/run#init"] unsafe extern "C" fn export_init() {
+                        $($path_to_types)*:: _export_init_cabi::<$ty > () } #[export_name
+                        = "component:plugin/run#create"] unsafe extern "C" fn
                         export_create(arg0 : * mut u8, arg1 : usize, arg2 : * mut u8,
                         arg3 : usize,) -> i32 { $($path_to_types)*::
                         _export_create_cabi::<$ty > (arg0, arg1, arg2, arg3) }
@@ -673,7 +1152,13 @@ pub mod exports {
                         _export_getmk_cabi::<$ty > () } #[export_name =
                         "cabi_post_component:plugin/run#getmk"] unsafe extern "C" fn
                         _post_return_getmk(arg0 : * mut u8,) { $($path_to_types)*::
-                        __post_return_getmk::<$ty > (arg0) } };
+                        __post_return_getmk::<$ty > (arg0) } #[export_name =
+                        "component:plugin/run#handle-put-record-request"] unsafe extern
+                        "C" fn export_handle_put_record_request(arg0 : * mut u8, arg1 :
+                        usize, arg2 : * mut u8, arg3 : usize, arg4 : * mut u8, arg5 :
+                        usize,) { $($path_to_types)*::
+                        _export_handle_put_record_request_cabi::<$ty > (arg0, arg1, arg2,
+                        arg3, arg4, arg5) } };
                     };
                 }
                 #[doc(hidden)]
@@ -810,27 +1295,42 @@ pub(crate) use __export_plugin_world_impl as export;
 #[cfg(target_arch = "wasm32")]
 #[link_section = "component-type:wit-bindgen:0.35.0:component:plugin:plugin-world:encoded world"]
 #[doc(hidden)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 849] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xce\x05\x01A\x02\x01\
-A\x09\x01B\x0e\x01r\x02\x04names\x05values\x04\0\x0cstring-event\x03\0\0\x01p}\x01\
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 1488] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xcd\x0a\x01A\x02\x01\
+A\x0d\x01B\x0e\x01r\x02\x04names\x05values\x04\0\x0cstring-event\x03\0\0\x01p}\x01\
 r\x02\x04names\x05value\x02\x04\0\x0bbytes-event\x03\0\x03\x01ps\x01r\x02\x04nam\
 es\x05value\x05\x04\0\x11string-list-event\x03\0\x06\x01q\x03\x04text\x01\x01\0\x05\
 bytes\x01\x04\0\x0bstring-list\x01\x07\0\x04\0\x05event\x03\0\x08\x01r\x04\x03ke\
 ys\x05codecs\x09threshold}\x05limit}\x04\0\x08key-args\x03\0\x0a\x01r\x02\x02mk\x02\
-\x04data\x02\x04\0\x0aprove-args\x03\0\x0c\x03\0\x14host:component/types\x05\0\x02\
-\x03\0\0\x05event\x02\x03\0\0\x08key-args\x02\x03\0\0\x0aprove-args\x01B\x14\x02\
-\x03\x02\x01\x01\x04\0\x05event\x03\0\0\x02\x03\x02\x01\x02\x04\0\x08key-args\x03\
-\0\x02\x02\x03\x02\x01\x03\x04\0\x0aprove-args\x03\0\x04\x01q\x04\x0dinvalid-cod\
-ec\x01s\0\x14wallet-uninitialized\0\0\x0emultikey-error\x01s\0\x0dkey-not-found\x01\
-s\0\x04\0\x08mk-error\x03\0\x06\x01@\x01\x03evt\x01\x01\0\x04\0\x04emit\x01\x08\x01\
-@\x01\x03msgs\x01\0\x04\0\x03log\x01\x09\x01@\0\0}\x04\0\x0brandom-byte\x01\x0a\x01\
-p}\x01j\x01\x0b\x01\x07\x01@\x01\x04args\x03\0\x0c\x04\0\x06get-mk\x01\x0d\x01@\x01\
-\x04args\x05\0\x0c\x04\0\x05prove\x01\x0e\x03\0\x13host:component/host\x05\x04\x01\
-B\x08\x01@\0\0s\x04\0\x04load\x01\0\x01@\x02\x04locks\x06unlocks\0\x7f\x04\0\x06\
-create\x01\x01\x01p}\x01k\x02\x01@\0\0\x03\x04\0\x05getmk\x01\x04\x04\0\x14compo\
-nent:plugin/run\x05\x05\x04\0\x1dcomponent:plugin/plugin-world\x04\0\x0b\x12\x01\
-\0\x0cplugin-world\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-compon\
-ent\x070.220.0\x10wit-bindgen-rust\x060.35.0";
+\x04data\x02\x04\0\x0aprove-args\x03\0\x0c\x03\0\x14host:component/types\x05\0\x01\
+B\x10\x01p}\x01r\x02\x05topics\x04data\0\x04\0\x07publish\x03\0\x01\x01r\x02\x03\
+key\0\x05value\0\x04\0\x09put-keyed\x03\0\x03\x01q\x03\x03put\x01\0\0\x09put-key\
+ed\x01\x04\0\x03get\x01\0\0\x04\0\x0esystem-command\x03\0\x05\x01r\x02\x07reques\
+t\0\x07peer-ids\x04\0\x0cpeer-request\x03\0\x07\x01r\x02\x03key\0\x05value\0\x04\
+\0\x0aput-record\x03\0\x09\x01q\x09\x07publish\x01\x02\0\x09subscribe\x01s\0\x0b\
+unsubscribe\x01s\0\x06system\x01\x06\0\x0cpeer-request\x01\x08\0\x0aput-record\x01\
+\x0a\0\x0aget-record\x01\0\0\x0dget-providers\x01\0\0\x0fstart-providing\x01\0\0\
+\x04\0\x0call-commands\x03\0\x0b\x01ps\x01q\x04\x04data\x01\0\0\x02id\x01s\0\x09\
+providers\x01\x0d\0\x04none\0\0\x04\0\x0dreturn-values\x03\0\x0e\x03\0\x18host:c\
+omponent/peerpiper\x05\x01\x02\x03\0\0\x05event\x02\x03\0\0\x08key-args\x02\x03\0\
+\0\x0aprove-args\x02\x03\0\x01\x0call-commands\x02\x03\0\x01\x0dreturn-values\x01\
+B\x1c\x02\x03\x02\x01\x02\x04\0\x05event\x03\0\0\x02\x03\x02\x01\x03\x04\0\x08ke\
+y-args\x03\0\x02\x02\x03\x02\x01\x04\x04\0\x0aprove-args\x03\0\x04\x02\x03\x02\x01\
+\x05\x04\0\x0call-commands\x03\0\x06\x02\x03\x02\x01\x06\x04\0\x0dreturn-values\x03\
+\0\x08\x01q\x04\x0dinvalid-codec\x01s\0\x14wallet-uninitialized\0\0\x0emultikey-\
+error\x01s\0\x0dkey-not-found\x01s\0\x04\0\x08mk-error\x03\0\x0a\x01@\x01\x03evt\
+\x01\x01\0\x04\0\x04emit\x01\x0c\x01@\x01\x03msgs\x01\0\x04\0\x03log\x01\x0d\x01\
+@\0\0}\x04\0\x0brandom-byte\x01\x0e\x01p}\x01j\x01\x0f\x01\x0b\x01@\x01\x04args\x03\
+\0\x10\x04\0\x06get-mk\x01\x11\x01@\x01\x04args\x05\0\x10\x04\0\x05prove\x01\x12\
+\x01@\x01\x05order\x07\x01\0\x04\0\x05order\x01\x13\x01@\0\0s\x04\0\x09get-scope\
+\x01\x14\x03\0\x13host:component/host\x05\x07\x01B\x0e\x01p}\x01r\x03\x03key\0\x05\
+value\0\x04peer\0\x04\0\x0akad-record\x03\0\x01\x01@\0\0s\x04\0\x04load\x01\x03\x01\
+@\0\x01\0\x04\0\x04init\x01\x04\x01@\x02\x04locks\x06unlocks\0\x7f\x04\0\x06crea\
+te\x01\x05\x01k\0\x01@\0\0\x06\x04\0\x05getmk\x01\x07\x01@\x01\x05value\x02\x01\0\
+\x04\0\x19handle-put-record-request\x01\x08\x04\0\x14component:plugin/run\x05\x08\
+\x04\0\x1dcomponent:plugin/plugin-world\x04\0\x0b\x12\x01\0\x0cplugin-world\x03\0\
+\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.220.0\x10wit-bi\
+ndgen-rust\x060.35.0";
 #[inline(never)]
 #[doc(hidden)]
 pub fn __link_custom_section_describing_imports() {

@@ -2,10 +2,12 @@
 mod bindings;
 
 use bestsign_core::Codec;
-use bindings::exports::component::plugin::run::Guest;
+use bindings::exports::component::plugin::run::{Guest, KadRecord};
 use bindings::host::component::host::{
-    emit, get_mk, log, prove, random_byte, Event, KeyArgs, ProveArgs,
+    emit, get_mk, get_scope, log, order, prove, random_byte, AllCommands, Event, KeyArgs, ProveArgs,
 };
+use bindings::host::component::peerpiper::SystemCommand;
+use bindings::host::component::peerpiper::{PutKeyed, PutRecord};
 use bindings::host::component::types::{StringEvent, StringListEvent};
 
 use bestsign_core::{
@@ -82,9 +84,7 @@ push("/entry/proof");
                     <Button on_click=create(lock, unlock)>Create Plog</Button>
                     `
                 } else {
-                    `
-                    <Label>pub multikey: ` + mk + `</Label>
-                    ` 
+                    `<Label>pub multikey: ` + mk + `</Label>` 
                     + 
                     pretty_plog.map(|p| `<Label>${p}</Label>`).reduce(|acc, s| acc + s, "")
                 }}
@@ -93,6 +93,44 @@ push("/entry/proof");
         }
         "#
         .to_string()
+    }
+
+    fn init() {
+        log("Initializing Bestsign Plugin");
+
+        // get rhai scope from host and do something with it
+        let scope = get_scope();
+
+        // turn scope string back into json
+        let value: rhai::Scope = serde_json::from_str(&scope).unwrap();
+        // try to get plog from scope
+        if let Some(plog) = value.get_value::<String>("plog") {
+            // if plog exists, try to deserde it into Plog Log
+            log(&format!("PlogSerde: {:?}", plog));
+            match serde_json::from_str::<Vec<u8>>(&plog) {
+                Ok(plog_bytes) => {
+                    if let Ok(plog) = Log::try_from(plog_bytes.as_slice()) {
+                        // if plog deserialized, PutRecord to DHT
+                        log(&format!("Plog: {:?}", plog));
+                        order(&AllCommands::PutRecord(PutRecord {
+                            key: plog.vlad.clone().into(),
+                            value: plog.head.clone().into(),
+                        }));
+                        log(&format!("DHT updated: Head entry cid: {:?}", plog.head));
+                    } else {
+                        log("ERROR: Failed to deserialize bytes into Plog from scope");
+                    }
+                }
+                Err(e) => {
+                    log(&format!(
+                        "ERROR: Failed to deserialize Plog into bytes from scope {:?}",
+                        e,
+                    ));
+                }
+            }
+        } else {
+            log("ERROR: No Plog found in scope");
+        }
     }
 
     fn create(lock: String, unlock: String) -> bool {
@@ -114,8 +152,20 @@ push("/entry/proof");
             limit: 1,
         };
         let pk = get_mk(&args);
-        log(&format!("getmk results pk: {:?}", pk));
+        //log(&format!("getmk results pk: {:?}", pk));
         pk.ok()
+    }
+
+    fn handle_put_record_request(value: KadRecord) {
+        let KadRecord { key, value, peer } = value;
+
+        log(&format!(
+            "[bestsign plugin] handle_put_record_request: key: {:?}, value: {:?}, peer: {:?}",
+            key, value, peer
+        ));
+
+        // TODO: Validate record. Whitelist/blakclist check peer.
+        order(&AllCommands::PutRecord(PutRecord { key, value }));
     }
 }
 
@@ -143,20 +193,53 @@ fn create_plog(lock: String, unlock: String) -> Result<Log, Error> {
         Error::Plog
     })?;
 
-    // use to_value to skip the is_human_readable check, so we keep everything
-    let plog_value = serde_json::to_value(&plog).map_err(|e| {
-        log(&format!("Failed to serialize Log: {:?}", e));
-        Error::Plog
-    })?;
+    // store all Plog and Vlad CID and values in Blockstore
+    // allow beetswap to do the rest from the head
 
-    let plog_bytes = serde_json::to_string_pretty(&plog_value).map_err(|e| {
+    log(&format!("Plog: {:?}", plog));
+    // entry length
+    log(&format!("Entry length: {:?}", plog.entries.len()));
+
+    // for each (cid, entry) in plog.entries. put in system blockstore
+    for (_cid, entry) in plog.entries.iter() {
+        log(&format!("Entry cid: {:?}", entry.cid()));
+
+        // check if head cid bytes match this entry cid bytes
+        if plog.head == entry.cid() {
+            // if so, store the entry in the system blockstore
+            log(&format!("Head entry cid MATCH: {:?}", entry.cid()));
+        }
+        order(&AllCommands::System(SystemCommand::PutKeyed(PutKeyed {
+            key: entry.cid().into(),
+            value: entry.clone().into(),
+        })));
+    }
+
+    // also save the first lock script value
+    order(&AllCommands::System(SystemCommand::Put(
+        plog.first_lock.clone().into(),
+    )));
+
+    log(&format!("Head entry cid: {:?}", plog.head));
+
+    // send order to put the record in the DHT
+    order(&AllCommands::PutRecord(PutRecord {
+        // key is the vlad bytes
+        key: plog.vlad.clone().into(),
+        // value is the CID we got back from putting the Plog in the system
+        value: plog.head.clone().into(),
+    }));
+
+    let plog_bytes: Vec<u8> = plog.clone().into();
+
+    let plog_bytes_str = serde_json::to_string(&plog_bytes).map_err(|e| {
         log(&format!("Failed to serialize Log to bytes: {:?}", e));
         Error::Plog
     })?;
 
     emit(&Event::Text(StringEvent {
         name: "plog".to_string(),
-        value: plog_bytes,
+        value: plog_bytes_str,
     }));
 
     //let encoded = EncodedVlad::new(Base::Base36Lower, plog.vlad.clone()).to_string();

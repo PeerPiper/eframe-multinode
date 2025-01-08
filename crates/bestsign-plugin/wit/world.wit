@@ -2,17 +2,31 @@ package component:plugin;
 
 interface run {
 
+  record kad-record {
+    key: list<u8>,
+    value: list<u8>,
+    peer: list<u8>,
+  }
+
   // from ./deps/host.wit
   // use host:component/types.{event, key-args};
 
   /// loads just the XML like markdown
+  /// Mandatory function for all plugins.
   load: func() -> string;
+
+  /// Optional init function. Can be noop if no initialization is needed. 
+  /// otherwise, feel free to do something with the inital Scope here.
+  init: func();
 
   /// Creates a data provenance log, returns the serialized log.
   create: func(lock: string, unlock: string) -> bool;
 
   /// Re-export get-mk, so that the rhai script can check to see if we have an available Multikey to use 
   getmk: func() -> option<list<u8>>;
+
+  /// Handles a DHT PutRecord Request, orders PutRecord command if request meets this plugin's criteria.
+  handle-put-record-request: func(value: kad-record);
 }
 
 /// An example world for the component to target.
