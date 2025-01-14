@@ -2,8 +2,8 @@
 members = ["crates/*"]
 
 [workspace.dependencies]
-html-to-egui = { path = "../rdx/crates/html-to-egui" }
-html-egui-bindgen = { path = "../rdx/crates/html-egui-bindgen" }
+html-to-egui = { git = "https://github.com/DougAnderson444/rdx.git" }
+html-egui-bindgen = { git = "https://github.com/DougAnderson444/rdx.git" }
 rhai = "1.20.1"
 
 [package]

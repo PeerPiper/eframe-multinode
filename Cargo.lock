@@ -3440,9 +3440,10 @@ dependencies = [
 [[package]]
 name = "html-egui-bindgen"
 version = "0.1.0"
+source = "git+https://github.com/DougAnderson444/rdx.git#8951c9d363f7e361b9aff3261cabf2d9e4f231a2"
 dependencies = [
  "html",
- "html-to-egui",
+ "html-to-egui 0.1.0 (git+https://github.com/DougAnderson444/rdx.git)",
 ]
 
 [[package]]
@@ -3454,6 +3455,14 @@ checksum = "13eca55667a5657dd1b86db77c5fe2d1810e3f9413e9555a2c4c461733dd2573"
 [[package]]
 name = "html-to-egui"
 version = "0.1.0"
+dependencies = [
+ "bon",
+]
+
+[[package]]
+name = "html-to-egui"
+version = "0.1.0"
+source = "git+https://github.com/DougAnderson444/rdx.git#8951c9d363f7e361b9aff3261cabf2d9e4f231a2"
 dependencies = [
  "bon",
 ]
@@ -6106,7 +6115,7 @@ version = "0.1.0"
 dependencies = [
  "getrandom",
  "html-egui-bindgen",
- "html-to-egui",
+ "html-to-egui 0.1.0 (git+https://github.com/DougAnderson444/rdx.git)",
  "multicid",
  "rhai",
  "wit-bindgen-rt",
@@ -6856,7 +6865,7 @@ dependencies = [
  "env_logger",
  "futures-lite",
  "getrandom",
- "html-to-egui",
+ "html-to-egui 0.1.0",
  "html5ever",
  "js_wasm_runtime_layer",
  "log",
