@@ -1,4 +1,5 @@
 #[allow(warnings)]
+#[cfg_attr(rustfmt, rustfmt_skip)]
 mod bindings;
 
 use std::collections::HashMap;
@@ -50,29 +51,29 @@ impl Guest for Component {
 
         if !encrypted_seed && !unlocked {
             render(`
-                <Vertical>
-                    <Label>Create a new wallet</Label>
-                    <TextEdit>{{username}}</TextEdit>
-                    <TextEdit password="true">{{password}}</TextEdit>
-                    <Button on_click=create(username, password)>Login</Button>
-                </Vertical>
+                <div>
+                    <label>Create a new wallet</label>
+                    <input value="{{username}}" />
+                    <input value="{{password}}" password="true" />
+                    <button data-on-click="create(username, password)">Login</button>
+                </div>
             `)
         } else if encrypted_seed && !unlocked {
             render(`
-                <Vertical>
-                    <Label>Unlock your wallet</Label>
-                    <TextEdit>{{encrypted_seed}}</TextEdit>
-                    <TextEdit>{{username}}</TextEdit>
-                    <TextEdit password="true">{{password}}</TextEdit>
-                    <Button on_click=unlock(username, password, encrypted_seed)>Unlock</Button>
-                </Vertical>
+                <div>
+                    <label>Unlock your wallet</label>
+                    <input value="{{encrypted_seed}}" />
+                    <input value="{{username}}" />
+                    <input value="{{password}}" password="true" />
+                    <button data-on-click="unlock(username, password, encrypted_seed)">Unlock</button>
+                </div>
             `)
         } else {
             render(`
-                <Vertical>
-                    <Label>Encrypted Seed:</Label>
-                    <Label>{{encrypted_seed}}</Label>
-                </Vertical>
+                <div>
+                    <label>Encrypted Seed:</label>
+                    <label>{{encrypted_seed}}</label>
+                </div>
             `)
         }
         "#

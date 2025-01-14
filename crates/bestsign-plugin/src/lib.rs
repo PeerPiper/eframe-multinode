@@ -1,4 +1,5 @@
 #[allow(warnings)]
+#[cfg_attr(rustfmt, rustfmt_skip)]
 mod bindings;
 
 use bestsign_core::Codec;
@@ -67,28 +68,28 @@ push("/entry/proof");
 
         if !is_def_var("vlad") && type_of(mk) != "array" {
             render(`
-                <Vertical>
-                    <Text>Unlock your wallet to see options</Text>
-                </Vertical>
+                <div>
+                    <p>Unlock your wallet to see options</p>
+                </div>
             `)
         } else {
     
             // If "plog" is defined, display the details & CRUD ops
             
             render(`
-                <Vertical>
+                <div>
                 ${if !is_def_var("pretty_plog") {
                     `
-                    <Text>{{lock}}</Text>
-                    <Text>{{unlock}}</Text>
-                    <Button on_click=create(lock, unlock)>Create Plog</Button>
+                    <p>{{lock}}</p>
+                    <p>{{unlock}}</p>
+                    <button data-on-click="create(lock, unlock)">Create Plog</button>
                     `
                 } else {
-                    `<Label>pub multikey: ` + mk + `</Label>` 
+                    `<label>pub multikey: ` + mk + `</label>` 
                     + 
-                    pretty_plog.map(|p| `<Label>${p}</Label>`).reduce(|acc, s| acc + s, "")
+                    pretty_plog.map(|p| `<label>${p}</label>`).reduce(|acc, s| acc + s, "")
                 }}
-                </Vertical>
+                </div>
             `)
         }
         "#
