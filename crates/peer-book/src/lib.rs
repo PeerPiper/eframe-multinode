@@ -1,7 +1,6 @@
 #[allow(warnings)]
+#[cfg_attr(rustfmt, rustfmt_skip)]
 mod bindings;
-
-use validate_rhai_proc_macro::validate_rhai;
 
 use bindings::exports::component::plugin::run::Guest;
 use bindings::host::component::host::{emit, log, order, random_byte, AllCommands, Event};
@@ -30,45 +29,45 @@ getrandom::register_custom_getrandom!(imported_random);
 
 struct Component;
 
-/// The Rhai script that will be executed when the component is loaded.
-/// This is separate here so we can test the Rhai script in isolation.
-const SCRIPT: &str = validate_rhai!(
-    r#"
-        render(`
-            <Vertical>
-                <Label>Peer Book</Label>
-                <TextEdit>{{vlad}}</TextEdit>
-                <Button on_click=search(vlad)>Search</Button>
-                ${if is_def_var("get_record") {
-                    `
-                    <Horizontal>
-                        <Label>VLAD</Label>
-                        <Label>Result</Label>
-                    </Horizontal>
-                    `
-                    +
-                    // loop over get_record and display the key and optional result if it exists
-                    get_record.values().map(|val| {
-                        `
-                        <Horizontal>
-                            <Label>${val}</Label>
-                        </Horizontal>
-                        `
-                    })
-                    .reduce(|acc, x| acc + x)
-
-                } else {
-                    `<Label>Enter a VLAD to search.</Label>` 
-                }}
-            </Vertical>
-        `)
-        "#
-);
+///// The Rhai script that will be executed when the component is loaded.
+///// This is separate here so we can test the Rhai script in isolation.
+//const SCRIPT: &str = validate_rhai!(
+//    r#"
+//        render(`
+//            <Vertical>
+//                <Label>Peer Book</Label>
+//                <TextEdit>{{vlad}}</TextEdit>
+//                <Button on_click=search(vlad)>Search</Button>
+//                ${if is_def_var("get_record") {
+//                    `
+//                    <Horizontal>
+//                        <Label>VLAD</Label>
+//                        <Label>Result</Label>
+//                    </Horizontal>
+//                    `
+//                    +
+//                    // loop over get_record and display the key and optional result if it exists
+//                    get_record.values().map(|val| {
+//                        `
+//                        <Horizontal>
+//                            <Label>${val}</Label>
+//                        </Horizontal>
+//                        `
+//                    })
+//                    .reduce(|acc, x| acc + x)
+//
+//                } else {
+//                    `<Label>Enter a VLAD to search.</Label>`
+//                }}
+//            </Vertical>
+//        `)
+//        "#
+//);
 
 impl Guest for Component {
     /// Say hello!
     fn load() -> String {
-        SCRIPT.to_string()
+        include_str!(concat!(env!("OUT_DIR"), "/peer-book.rhai")).to_string()
     }
 
     fn search(vlad: String) -> Result<String, String> {
@@ -117,46 +116,4 @@ impl Guest for Component {
 bindings::export!(Component with_types_in bindings);
 
 #[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
-
-    use super::*;
-
-    use rhai::{Dynamic, Engine, Scope};
-
-    // a function to test that the render function returns valid Rhai script
-    #[test]
-    fn test_load_render_fn() {
-        // load SCRIPT into Rhai, and run render function
-        let mut engine = Engine::new();
-        let mut scope = Scope::new();
-
-        // add get_record to scope
-        let mut hm = HashMap::new();
-        hm.insert("alice", "Bob");
-        hm.insert("charlie", "David");
-        let rhai_map: Dynamic = hm.into();
-
-        scope.set_value("get_record", rhai_map);
-
-        // dummy render
-        engine.register_fn("render", |s: String| s);
-
-        let ast = engine.compile_with_scope(&scope, SCRIPT).unwrap();
-
-        //// Execute script
-        let res = engine
-            .eval_ast_with_scope::<String>(&mut scope, &ast)
-            .unwrap();
-
-        eprintln!("Result: {:?}", res);
-
-        //// Call the tick function
-        //if let Err(e) = engine.call_fn::<()>(&mut scope, &ast, "render", ()) {
-        //    eprintln!("Failed to call tick function: {:?}", e);
-        //}
-
-        // check that the result is a valid Rhai script
-        //assert!(result.is_ok());
-    }
-}
+mod tests {}

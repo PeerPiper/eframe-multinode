@@ -58,16 +58,22 @@ use bindings::exports::component::plugin::run::Guest; // update path to exported
 fn load() -> String {
         r#"
         render(`
-            <Vertical>
-                <Label>Peer Book</Label>
-                <TextEdit>{{vlad}}</TextEdit>
-                <Button on_click=search(vlad)>Search</Button>
-            </Vertical>
+            <div>
+                <label>Peer Book</label>
+
+                <!-- We bind the value of vlad to a rhai::Scope variable we named `vlad` -->
+                <input value="{{vlad}}" />
+
+                <!-- because we defined a {{vlad}} above, it is available to any RDX function in the html -->
+                <button data-on-click="search(vlad)">Search</button>
+            </div>
         `)
         "#
         .to_string()    
 }
 ```
+
+Note that valid html is required, but only a subset of html is supported by the RDX renderer at this time. Invalid html will likely cause the RDX renderer to fail. Given that, it's probably best to use the [html](https://docs.rs/html/latest/html/) crate and a `build.rs` process to generate your RDX at compile time, so you can benefit from type safety to avoid typos, and precompile the Rhai to ensure it is also valid.
 
 - addtional functions and types can be added to `run` as needed, and used by any RDX template code. The parsed RDX renderer will automatically search for named functions in the wasm code it finds int he RDX template. For example, in our new code `on_click` will try to find an exported func name `search` with the rhai scope value under `vlad` as the argument.
 - `search(vlad)` doesn't exist yet, but we can add it to both our interface (WIT) and our Rust code:

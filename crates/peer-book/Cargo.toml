@@ -7,10 +7,14 @@ edition = "2021"
 wit-bindgen-rt = { version = "0.36.0", features = ["bitflags"] }
 multicid = { git = "https://github.com/DougAnderson444/multicid.git", branch = "external-prover" }
 getrandom = { version = "0.2", features = ["custom"] }
-validate_rhai_proc_macro = { git = "https://github.com/DougAnderson444/rdx.git" }
 
 [dev-dependencies]
 rhai = "1.20.1"
+
+[build-dependencies]
+html-to-egui = { workspace = true }
+html-egui-bindgen = { workspace = true }
+rhai = { workspace = true }
 
 [lib]
 crate-type = ["cdylib"]
