@@ -46,10 +46,7 @@ impl Guest for Component {
         // 2) encrypted_seed, and is not unlocked. Unlock the seed.
         // 3) encrypted_seed, and is unlocked. Show the encrypted seed.
         r#"
-        let encrypted_seed = is_def_var("encrypted_seed");
-        let unlocked = unlocked();
-
-        if !encrypted_seed && !unlocked {
+        if !is_def_var("encrypted_seed") && !unlocked() {
             render(`
                 <div>
                     <label>Create a new wallet</label>
@@ -58,7 +55,7 @@ impl Guest for Component {
                     <button data-on-click="create(username, password)">Login</button>
                 </div>
             `)
-        } else if encrypted_seed && !unlocked {
+        } else if is_def_var("encrypted_seed") && !unlocked() {
             render(`
                 <div>
                     <label>Unlock your wallet</label>

@@ -44,7 +44,7 @@ pub mod host {
                         .finish()
                 }
             }
-            /// Event wherte there is a list of strings
+            /// Event where there is a list of strings
             #[derive(Clone)]
             pub struct StringListEvent {
                 /// The variable name
@@ -65,6 +65,9 @@ pub mod host {
             /// Event is a variant of string and bytes events.
             #[derive(Clone)]
             pub enum Event {
+                /// Save all the rhai Scope to disk.
+                Save,
+                /// Add this string key value pair to the scope.
                 Text(StringEvent),
                 Bytes(BytesEvent),
                 StringList(StringListEvent),
@@ -75,6 +78,7 @@ pub mod host {
                     f: &mut ::core::fmt::Formatter<'_>,
                 ) -> ::core::fmt::Result {
                     match self {
+                        Event::Save => f.debug_tuple("Event::Save").finish(),
                         Event::Text(e) => f.debug_tuple("Event::Text").field(e).finish(),
                         Event::Bytes(e) => {
                             f.debug_tuple("Event::Bytes").field(e).finish()
@@ -358,6 +362,15 @@ pub mod host {
                     let mut cleanup_list = _rt::Vec::new();
                     use super::super::super::host::component::types::Event as V10;
                     let (result11_0, result11_1, result11_2, result11_3, result11_4) = match evt {
+                        V10::Save => {
+                            (
+                                0i32,
+                                ::core::ptr::null_mut(),
+                                0usize,
+                                ::core::ptr::null_mut(),
+                                0usize,
+                            )
+                        }
                         V10::Text(e) => {
                             let super::super::super::host::component::types::StringEvent {
                                 name: name0,
@@ -369,7 +382,7 @@ pub mod host {
                             let vec2 = value0;
                             let ptr2 = vec2.as_ptr().cast::<u8>();
                             let len2 = vec2.len();
-                            (0i32, ptr1.cast_mut(), len1, ptr2.cast_mut(), len2)
+                            (1i32, ptr1.cast_mut(), len1, ptr2.cast_mut(), len2)
                         }
                         V10::Bytes(e) => {
                             let super::super::super::host::component::types::BytesEvent {
@@ -382,7 +395,7 @@ pub mod host {
                             let vec5 = value3;
                             let ptr5 = vec5.as_ptr().cast::<u8>();
                             let len5 = vec5.len();
-                            (1i32, ptr4.cast_mut(), len4, ptr5.cast_mut(), len5)
+                            (2i32, ptr4.cast_mut(), len4, ptr5.cast_mut(), len5)
                         }
                         V10::StringList(e) => {
                             let super::super::super::host::component::types::StringListEvent {
@@ -418,7 +431,7 @@ pub mod host {
                                 }
                             }
                             cleanup_list.extend_from_slice(&[(result9, layout9)]);
-                            (2i32, ptr7.cast_mut(), len7, result9, len9)
+                            (3i32, ptr7.cast_mut(), len7, result9, len9)
                         }
                     };
                     #[cfg(target_arch = "wasm32")]
@@ -1295,42 +1308,42 @@ pub(crate) use __export_plugin_world_impl as export;
 #[cfg(target_arch = "wasm32")]
 #[link_section = "component-type:wit-bindgen:0.35.0:component:plugin:plugin-world:encoded world"]
 #[doc(hidden)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 1488] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xcd\x0a\x01A\x02\x01\
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 1495] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xd4\x0a\x01A\x02\x01\
 A\x0d\x01B\x0e\x01r\x02\x04names\x05values\x04\0\x0cstring-event\x03\0\0\x01p}\x01\
 r\x02\x04names\x05value\x02\x04\0\x0bbytes-event\x03\0\x03\x01ps\x01r\x02\x04nam\
-es\x05value\x05\x04\0\x11string-list-event\x03\0\x06\x01q\x03\x04text\x01\x01\0\x05\
-bytes\x01\x04\0\x0bstring-list\x01\x07\0\x04\0\x05event\x03\0\x08\x01r\x04\x03ke\
-ys\x05codecs\x09threshold}\x05limit}\x04\0\x08key-args\x03\0\x0a\x01r\x02\x02mk\x02\
-\x04data\x02\x04\0\x0aprove-args\x03\0\x0c\x03\0\x14host:component/types\x05\0\x01\
-B\x10\x01p}\x01r\x02\x05topics\x04data\0\x04\0\x07publish\x03\0\x01\x01r\x02\x03\
-key\0\x05value\0\x04\0\x09put-keyed\x03\0\x03\x01q\x03\x03put\x01\0\0\x09put-key\
-ed\x01\x04\0\x03get\x01\0\0\x04\0\x0esystem-command\x03\0\x05\x01r\x02\x07reques\
-t\0\x07peer-ids\x04\0\x0cpeer-request\x03\0\x07\x01r\x02\x03key\0\x05value\0\x04\
-\0\x0aput-record\x03\0\x09\x01q\x09\x07publish\x01\x02\0\x09subscribe\x01s\0\x0b\
-unsubscribe\x01s\0\x06system\x01\x06\0\x0cpeer-request\x01\x08\0\x0aput-record\x01\
-\x0a\0\x0aget-record\x01\0\0\x0dget-providers\x01\0\0\x0fstart-providing\x01\0\0\
-\x04\0\x0call-commands\x03\0\x0b\x01ps\x01q\x04\x04data\x01\0\0\x02id\x01s\0\x09\
-providers\x01\x0d\0\x04none\0\0\x04\0\x0dreturn-values\x03\0\x0e\x03\0\x18host:c\
-omponent/peerpiper\x05\x01\x02\x03\0\0\x05event\x02\x03\0\0\x08key-args\x02\x03\0\
-\0\x0aprove-args\x02\x03\0\x01\x0call-commands\x02\x03\0\x01\x0dreturn-values\x01\
-B\x1c\x02\x03\x02\x01\x02\x04\0\x05event\x03\0\0\x02\x03\x02\x01\x03\x04\0\x08ke\
-y-args\x03\0\x02\x02\x03\x02\x01\x04\x04\0\x0aprove-args\x03\0\x04\x02\x03\x02\x01\
-\x05\x04\0\x0call-commands\x03\0\x06\x02\x03\x02\x01\x06\x04\0\x0dreturn-values\x03\
-\0\x08\x01q\x04\x0dinvalid-codec\x01s\0\x14wallet-uninitialized\0\0\x0emultikey-\
-error\x01s\0\x0dkey-not-found\x01s\0\x04\0\x08mk-error\x03\0\x0a\x01@\x01\x03evt\
-\x01\x01\0\x04\0\x04emit\x01\x0c\x01@\x01\x03msgs\x01\0\x04\0\x03log\x01\x0d\x01\
-@\0\0}\x04\0\x0brandom-byte\x01\x0e\x01p}\x01j\x01\x0f\x01\x0b\x01@\x01\x04args\x03\
-\0\x10\x04\0\x06get-mk\x01\x11\x01@\x01\x04args\x05\0\x10\x04\0\x05prove\x01\x12\
-\x01@\x01\x05order\x07\x01\0\x04\0\x05order\x01\x13\x01@\0\0s\x04\0\x09get-scope\
-\x01\x14\x03\0\x13host:component/host\x05\x07\x01B\x0e\x01p}\x01r\x03\x03key\0\x05\
-value\0\x04peer\0\x04\0\x0akad-record\x03\0\x01\x01@\0\0s\x04\0\x04load\x01\x03\x01\
-@\0\x01\0\x04\0\x04init\x01\x04\x01@\x02\x04locks\x06unlocks\0\x7f\x04\0\x06crea\
-te\x01\x05\x01k\0\x01@\0\0\x06\x04\0\x05getmk\x01\x07\x01@\x01\x05value\x02\x01\0\
-\x04\0\x19handle-put-record-request\x01\x08\x04\0\x14component:plugin/run\x05\x08\
-\x04\0\x1dcomponent:plugin/plugin-world\x04\0\x0b\x12\x01\0\x0cplugin-world\x03\0\
-\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.220.0\x10wit-bi\
-ndgen-rust\x060.35.0";
+es\x05value\x05\x04\0\x11string-list-event\x03\0\x06\x01q\x04\x04save\0\0\x04tex\
+t\x01\x01\0\x05bytes\x01\x04\0\x0bstring-list\x01\x07\0\x04\0\x05event\x03\0\x08\
+\x01r\x04\x03keys\x05codecs\x09threshold}\x05limit}\x04\0\x08key-args\x03\0\x0a\x01\
+r\x02\x02mk\x02\x04data\x02\x04\0\x0aprove-args\x03\0\x0c\x03\0\x14host:componen\
+t/types\x05\0\x01B\x10\x01p}\x01r\x02\x05topics\x04data\0\x04\0\x07publish\x03\0\
+\x01\x01r\x02\x03key\0\x05value\0\x04\0\x09put-keyed\x03\0\x03\x01q\x03\x03put\x01\
+\0\0\x09put-keyed\x01\x04\0\x03get\x01\0\0\x04\0\x0esystem-command\x03\0\x05\x01\
+r\x02\x07request\0\x07peer-ids\x04\0\x0cpeer-request\x03\0\x07\x01r\x02\x03key\0\
+\x05value\0\x04\0\x0aput-record\x03\0\x09\x01q\x09\x07publish\x01\x02\0\x09subsc\
+ribe\x01s\0\x0bunsubscribe\x01s\0\x06system\x01\x06\0\x0cpeer-request\x01\x08\0\x0a\
+put-record\x01\x0a\0\x0aget-record\x01\0\0\x0dget-providers\x01\0\0\x0fstart-pro\
+viding\x01\0\0\x04\0\x0call-commands\x03\0\x0b\x01ps\x01q\x04\x04data\x01\0\0\x02\
+id\x01s\0\x09providers\x01\x0d\0\x04none\0\0\x04\0\x0dreturn-values\x03\0\x0e\x03\
+\0\x18host:component/peerpiper\x05\x01\x02\x03\0\0\x05event\x02\x03\0\0\x08key-a\
+rgs\x02\x03\0\0\x0aprove-args\x02\x03\0\x01\x0call-commands\x02\x03\0\x01\x0dret\
+urn-values\x01B\x1c\x02\x03\x02\x01\x02\x04\0\x05event\x03\0\0\x02\x03\x02\x01\x03\
+\x04\0\x08key-args\x03\0\x02\x02\x03\x02\x01\x04\x04\0\x0aprove-args\x03\0\x04\x02\
+\x03\x02\x01\x05\x04\0\x0call-commands\x03\0\x06\x02\x03\x02\x01\x06\x04\0\x0dre\
+turn-values\x03\0\x08\x01q\x04\x0dinvalid-codec\x01s\0\x14wallet-uninitialized\0\
+\0\x0emultikey-error\x01s\0\x0dkey-not-found\x01s\0\x04\0\x08mk-error\x03\0\x0a\x01\
+@\x01\x03evt\x01\x01\0\x04\0\x04emit\x01\x0c\x01@\x01\x03msgs\x01\0\x04\0\x03log\
+\x01\x0d\x01@\0\0}\x04\0\x0brandom-byte\x01\x0e\x01p}\x01j\x01\x0f\x01\x0b\x01@\x01\
+\x04args\x03\0\x10\x04\0\x06get-mk\x01\x11\x01@\x01\x04args\x05\0\x10\x04\0\x05p\
+rove\x01\x12\x01@\x01\x05order\x07\x01\0\x04\0\x05order\x01\x13\x01@\0\0s\x04\0\x09\
+get-scope\x01\x14\x03\0\x13host:component/host\x05\x07\x01B\x0e\x01p}\x01r\x03\x03\
+key\0\x05value\0\x04peer\0\x04\0\x0akad-record\x03\0\x01\x01@\0\0s\x04\0\x04load\
+\x01\x03\x01@\0\x01\0\x04\0\x04init\x01\x04\x01@\x02\x04locks\x06unlocks\0\x7f\x04\
+\0\x06create\x01\x05\x01k\0\x01@\0\0\x06\x04\0\x05getmk\x01\x07\x01@\x01\x05valu\
+e\x02\x01\0\x04\0\x19handle-put-record-request\x01\x08\x04\0\x14component:plugin\
+/run\x05\x08\x04\0\x1dcomponent:plugin/plugin-world\x04\0\x0b\x12\x01\0\x0cplugi\
+n-world\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.22\
+0.0\x10wit-bindgen-rust\x060.35.0";
 #[inline(never)]
 #[doc(hidden)]
 pub fn __link_custom_section_describing_imports() {

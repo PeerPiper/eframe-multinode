@@ -21,6 +21,9 @@ use bestsign_core::{
     Key, Log, Multikey, Multisig, Script,
 };
 
+/// Constant for the key we save the "plog" in the scope
+const PLOG_KEY: &str = "plog";
+
 /// Custom function to use the import for random byte generation.
 ///
 /// We do this is because "js" feature is incompatible with the component model
@@ -64,9 +67,7 @@ push("/entry/proof");
 
         r#"
         // Get the public(multi)key from the wallet, if unlocked.
-        let mk = getmk();
-
-        if !is_def_var("vlad") && type_of(mk) != "array" {
+        if !is_def_var("vlad") && type_of(getmk()) != "array" {
             render(`
                 <div>
                     <p>Unlock your wallet to see options</p>
@@ -85,7 +86,7 @@ push("/entry/proof");
                     <button data-on-click="create(lock, unlock)">Create Plog</button>
                     `
                 } else {
-                    `<label>pub multikey: ` + mk + `</label>` 
+                    `<label>pub multikey: ` + getmk() + `</label>` 
                     + 
                     pretty_plog.map(|p| `<label>${p}</label>`).reduce(|acc, s| acc + s, "")
                 }}
@@ -105,7 +106,7 @@ push("/entry/proof");
         // turn scope string back into json
         let value: rhai::Scope = serde_json::from_str(&scope).unwrap();
         // try to get plog from scope
-        if let Some(plog) = value.get_value::<String>("plog") {
+        if let Some(plog) = value.get_value::<String>(PLOG_KEY) {
             // if plog exists, try to deserde it into Plog Log
             log(&format!("PlogSerde: {:?}", plog));
             match serde_json::from_str::<Vec<u8>>(&plog) {
@@ -239,7 +240,7 @@ fn create_plog(lock: String, unlock: String) -> Result<Log, Error> {
     })?;
 
     emit(&Event::Text(StringEvent {
-        name: "plog".to_string(),
+        name: PLOG_KEY.to_string(),
         value: plog_bytes_str,
     }));
 
