@@ -44,7 +44,7 @@ pub mod host {
                         .finish()
                 }
             }
-            /// Event wherte there is a list of strings
+            /// Event where there is a list of strings
             #[derive(Clone)]
             pub struct StringListEvent {
                 /// The variable name
@@ -65,6 +65,9 @@ pub mod host {
             /// Event is a variant of string and bytes events.
             #[derive(Clone)]
             pub enum Event {
+                /// Save all the rhai Scope to disk.
+                Save,
+                /// Add this string key value pair to the scope.
                 Text(StringEvent),
                 Bytes(BytesEvent),
                 StringList(StringListEvent),
@@ -75,6 +78,7 @@ pub mod host {
                     f: &mut ::core::fmt::Formatter<'_>,
                 ) -> ::core::fmt::Result {
                     match self {
+                        Event::Save => f.debug_tuple("Event::Save").finish(),
                         Event::Text(e) => f.debug_tuple("Event::Text").field(e).finish(),
                         Event::Bytes(e) => {
                             f.debug_tuple("Event::Bytes").field(e).finish()
@@ -358,6 +362,15 @@ pub mod host {
                     let mut cleanup_list = _rt::Vec::new();
                     use super::super::super::host::component::types::Event as V10;
                     let (result11_0, result11_1, result11_2, result11_3, result11_4) = match evt {
+                        V10::Save => {
+                            (
+                                0i32,
+                                ::core::ptr::null_mut(),
+                                0usize,
+                                ::core::ptr::null_mut(),
+                                0usize,
+                            )
+                        }
                         V10::Text(e) => {
                             let super::super::super::host::component::types::StringEvent {
                                 name: name0,
@@ -369,7 +382,7 @@ pub mod host {
                             let vec2 = value0;
                             let ptr2 = vec2.as_ptr().cast::<u8>();
                             let len2 = vec2.len();
-                            (0i32, ptr1.cast_mut(), len1, ptr2.cast_mut(), len2)
+                            (1i32, ptr1.cast_mut(), len1, ptr2.cast_mut(), len2)
                         }
                         V10::Bytes(e) => {
                             let super::super::super::host::component::types::BytesEvent {
@@ -382,7 +395,7 @@ pub mod host {
                             let vec5 = value3;
                             let ptr5 = vec5.as_ptr().cast::<u8>();
                             let len5 = vec5.len();
-                            (1i32, ptr4.cast_mut(), len4, ptr5.cast_mut(), len5)
+                            (2i32, ptr4.cast_mut(), len4, ptr5.cast_mut(), len5)
                         }
                         V10::StringList(e) => {
                             let super::super::super::host::component::types::StringListEvent {
@@ -418,7 +431,7 @@ pub mod host {
                                 }
                             }
                             cleanup_list.extend_from_slice(&[(result9, layout9)]);
-                            (2i32, ptr7.cast_mut(), len7, result9, len9)
+                            (3i32, ptr7.cast_mut(), len7, result9, len9)
                         }
                     };
                     #[cfg(target_arch = "wasm32")]
@@ -1015,6 +1028,65 @@ pub mod exports {
                 }
                 #[doc(hidden)]
                 #[allow(non_snake_case)]
+                pub unsafe fn _export_init_cabi<T: Guest>() {
+                    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
+                    T::init();
+                }
+                #[doc(hidden)]
+                #[allow(non_snake_case)]
+                pub unsafe fn _export_register_cabi<T: Guest>() -> *mut u8 {
+                    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
+                    let result0 = T::register();
+                    let ptr1 = _RET_AREA.0.as_mut_ptr().cast::<u8>();
+                    let vec3 = result0;
+                    let len3 = vec3.len();
+                    let layout3 = _rt::alloc::Layout::from_size_align_unchecked(
+                        vec3.len() * 8,
+                        4,
+                    );
+                    let result3 = if layout3.size() != 0 {
+                        let ptr = _rt::alloc::alloc(layout3).cast::<u8>();
+                        if ptr.is_null() {
+                            _rt::alloc::handle_alloc_error(layout3);
+                        }
+                        ptr
+                    } else {
+                        ::core::ptr::null_mut()
+                    };
+                    for (i, e) in vec3.into_iter().enumerate() {
+                        let base = result3.add(i * 8);
+                        {
+                            let vec2 = (e.into_bytes()).into_boxed_slice();
+                            let ptr2 = vec2.as_ptr().cast::<u8>();
+                            let len2 = vec2.len();
+                            ::core::mem::forget(vec2);
+                            *base.add(4).cast::<usize>() = len2;
+                            *base.add(0).cast::<*mut u8>() = ptr2.cast_mut();
+                        }
+                    }
+                    *ptr1.add(4).cast::<usize>() = len3;
+                    *ptr1.add(0).cast::<*mut u8>() = result3;
+                    ptr1
+                }
+                #[doc(hidden)]
+                #[allow(non_snake_case)]
+                pub unsafe fn __post_return_register<T: Guest>(arg0: *mut u8) {
+                    let l0 = *arg0.add(0).cast::<*mut u8>();
+                    let l1 = *arg0.add(4).cast::<usize>();
+                    let base4 = l0;
+                    let len4 = l1;
+                    for i in 0..len4 {
+                        let base = base4.add(i * 8);
+                        {
+                            let l2 = *base.add(0).cast::<*mut u8>();
+                            let l3 = *base.add(4).cast::<usize>();
+                            _rt::cabi_dealloc(l2, l3, 1);
+                        }
+                    }
+                    _rt::cabi_dealloc(base4, len4 * 8, 4);
+                }
+                #[doc(hidden)]
+                #[allow(non_snake_case)]
                 pub unsafe fn _export_search_cabi<T: Guest>(
                     arg0: *mut u8,
                     arg1: usize,
@@ -1025,23 +1097,17 @@ pub mod exports {
                     let result1 = T::search(_rt::string_lift(bytes0));
                     let ptr2 = _RET_AREA.0.as_mut_ptr().cast::<u8>();
                     match result1 {
-                        Ok(e) => {
+                        Ok(_) => {
                             *ptr2.add(0).cast::<u8>() = (0i32) as u8;
+                        }
+                        Err(e) => {
+                            *ptr2.add(0).cast::<u8>() = (1i32) as u8;
                             let vec3 = (e.into_bytes()).into_boxed_slice();
                             let ptr3 = vec3.as_ptr().cast::<u8>();
                             let len3 = vec3.len();
                             ::core::mem::forget(vec3);
                             *ptr2.add(8).cast::<usize>() = len3;
                             *ptr2.add(4).cast::<*mut u8>() = ptr3.cast_mut();
-                        }
-                        Err(e) => {
-                            *ptr2.add(0).cast::<u8>() = (1i32) as u8;
-                            let vec4 = (e.into_bytes()).into_boxed_slice();
-                            let ptr4 = vec4.as_ptr().cast::<u8>();
-                            let len4 = vec4.len();
-                            ::core::mem::forget(vec4);
-                            *ptr2.add(8).cast::<usize>() = len4;
-                            *ptr2.add(4).cast::<*mut u8>() = ptr4.cast_mut();
                         }
                     };
                     ptr2
@@ -1051,23 +1117,164 @@ pub mod exports {
                 pub unsafe fn __post_return_search<T: Guest>(arg0: *mut u8) {
                     let l0 = i32::from(*arg0.add(0).cast::<u8>());
                     match l0 {
-                        0 => {
+                        0 => {}
+                        _ => {
                             let l1 = *arg0.add(4).cast::<*mut u8>();
                             let l2 = *arg0.add(8).cast::<usize>();
                             _rt::cabi_dealloc(l1, l2, 1);
                         }
+                    }
+                }
+                #[doc(hidden)]
+                #[allow(non_snake_case)]
+                pub unsafe fn _export_add_to_contacts_cabi<T: Guest>(
+                    arg0: *mut u8,
+                    arg1: usize,
+                    arg2: *mut u8,
+                    arg3: usize,
+                ) -> *mut u8 {
+                    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
+                    let len0 = arg1;
+                    let bytes0 = _rt::Vec::from_raw_parts(arg0.cast(), len0, len0);
+                    let len1 = arg3;
+                    let bytes1 = _rt::Vec::from_raw_parts(arg2.cast(), len1, len1);
+                    let result2 = T::add_to_contacts(
+                        _rt::string_lift(bytes0),
+                        _rt::string_lift(bytes1),
+                    );
+                    let ptr3 = _RET_AREA.0.as_mut_ptr().cast::<u8>();
+                    match result2 {
+                        Ok(_) => {
+                            *ptr3.add(0).cast::<u8>() = (0i32) as u8;
+                        }
+                        Err(e) => {
+                            *ptr3.add(0).cast::<u8>() = (1i32) as u8;
+                            let vec4 = (e.into_bytes()).into_boxed_slice();
+                            let ptr4 = vec4.as_ptr().cast::<u8>();
+                            let len4 = vec4.len();
+                            ::core::mem::forget(vec4);
+                            *ptr3.add(8).cast::<usize>() = len4;
+                            *ptr3.add(4).cast::<*mut u8>() = ptr4.cast_mut();
+                        }
+                    };
+                    ptr3
+                }
+                #[doc(hidden)]
+                #[allow(non_snake_case)]
+                pub unsafe fn __post_return_add_to_contacts<T: Guest>(arg0: *mut u8) {
+                    let l0 = i32::from(*arg0.add(0).cast::<u8>());
+                    match l0 {
+                        0 => {}
                         _ => {
-                            let l3 = *arg0.add(4).cast::<*mut u8>();
-                            let l4 = *arg0.add(8).cast::<usize>();
-                            _rt::cabi_dealloc(l3, l4, 1);
+                            let l1 = *arg0.add(4).cast::<*mut u8>();
+                            let l2 = *arg0.add(8).cast::<usize>();
+                            _rt::cabi_dealloc(l1, l2, 1);
                         }
                     }
+                }
+                #[doc(hidden)]
+                #[allow(non_snake_case)]
+                pub unsafe fn _export_contacts_cabi<T: Guest>() -> *mut u8 {
+                    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
+                    let result0 = T::contacts();
+                    let ptr1 = _RET_AREA.0.as_mut_ptr().cast::<u8>();
+                    let vec4 = result0;
+                    let len4 = vec4.len();
+                    let layout4 = _rt::alloc::Layout::from_size_align_unchecked(
+                        vec4.len() * 8,
+                        4,
+                    );
+                    let result4 = if layout4.size() != 0 {
+                        let ptr = _rt::alloc::alloc(layout4).cast::<u8>();
+                        if ptr.is_null() {
+                            _rt::alloc::handle_alloc_error(layout4);
+                        }
+                        ptr
+                    } else {
+                        ::core::ptr::null_mut()
+                    };
+                    for (i, e) in vec4.into_iter().enumerate() {
+                        let base = result4.add(i * 8);
+                        {
+                            let vec3 = e;
+                            let len3 = vec3.len();
+                            let layout3 = _rt::alloc::Layout::from_size_align_unchecked(
+                                vec3.len() * 8,
+                                4,
+                            );
+                            let result3 = if layout3.size() != 0 {
+                                let ptr = _rt::alloc::alloc(layout3).cast::<u8>();
+                                if ptr.is_null() {
+                                    _rt::alloc::handle_alloc_error(layout3);
+                                }
+                                ptr
+                            } else {
+                                ::core::ptr::null_mut()
+                            };
+                            for (i, e) in vec3.into_iter().enumerate() {
+                                let base = result3.add(i * 8);
+                                {
+                                    let vec2 = (e.into_bytes()).into_boxed_slice();
+                                    let ptr2 = vec2.as_ptr().cast::<u8>();
+                                    let len2 = vec2.len();
+                                    ::core::mem::forget(vec2);
+                                    *base.add(4).cast::<usize>() = len2;
+                                    *base.add(0).cast::<*mut u8>() = ptr2.cast_mut();
+                                }
+                            }
+                            *base.add(4).cast::<usize>() = len3;
+                            *base.add(0).cast::<*mut u8>() = result3;
+                        }
+                    }
+                    *ptr1.add(4).cast::<usize>() = len4;
+                    *ptr1.add(0).cast::<*mut u8>() = result4;
+                    ptr1
+                }
+                #[doc(hidden)]
+                #[allow(non_snake_case)]
+                pub unsafe fn __post_return_contacts<T: Guest>(arg0: *mut u8) {
+                    let l0 = *arg0.add(0).cast::<*mut u8>();
+                    let l1 = *arg0.add(4).cast::<usize>();
+                    let base7 = l0;
+                    let len7 = l1;
+                    for i in 0..len7 {
+                        let base = base7.add(i * 8);
+                        {
+                            let l2 = *base.add(0).cast::<*mut u8>();
+                            let l3 = *base.add(4).cast::<usize>();
+                            let base6 = l2;
+                            let len6 = l3;
+                            for i in 0..len6 {
+                                let base = base6.add(i * 8);
+                                {
+                                    let l4 = *base.add(0).cast::<*mut u8>();
+                                    let l5 = *base.add(4).cast::<usize>();
+                                    _rt::cabi_dealloc(l4, l5, 1);
+                                }
+                            }
+                            _rt::cabi_dealloc(base6, len6 * 8, 4);
+                        }
+                    }
+                    _rt::cabi_dealloc(base7, len7 * 8, 4);
                 }
                 pub trait Guest {
                     /// loads just the RDX for rendering
                     fn load() -> _rt::String;
+                    /// initialize the state of the component
+                    fn init();
+                    /// Register wasm functions to be bound to Rhai
+                    /// Returns a list of func names that are to be bound
+                    fn register() -> _rt::Vec<_rt::String>;
                     /// search for a peer by VLAD
-                    fn search(vlad: _rt::String) -> Result<_rt::String, _rt::String>;
+                    fn search(vlad: _rt::String) -> Result<(), _rt::String>;
+                    /// Adds this vlad's nickname to contacts
+                    fn add_to_contacts(
+                        vlad: _rt::String,
+                        nickname: _rt::String,
+                    ) -> Result<(), _rt::String>;
+                    /// Contacts that are in our Book.
+                    /// [vlad, nickname, notes]
+                    fn contacts() -> _rt::Vec<_rt::Vec<_rt::String>>;
                 }
                 #[doc(hidden)]
                 macro_rules! __export_component_plugin_run_cabi {
@@ -1078,12 +1285,34 @@ pub mod exports {
                         = "cabi_post_component:plugin/run#load"] unsafe extern "C" fn
                         _post_return_load(arg0 : * mut u8,) { $($path_to_types)*::
                         __post_return_load::<$ty > (arg0) } #[export_name =
+                        "component:plugin/run#init"] unsafe extern "C" fn export_init() {
+                        $($path_to_types)*:: _export_init_cabi::<$ty > () } #[export_name
+                        = "component:plugin/run#register"] unsafe extern "C" fn
+                        export_register() -> * mut u8 { $($path_to_types)*::
+                        _export_register_cabi::<$ty > () } #[export_name =
+                        "cabi_post_component:plugin/run#register"] unsafe extern "C" fn
+                        _post_return_register(arg0 : * mut u8,) { $($path_to_types)*::
+                        __post_return_register::<$ty > (arg0) } #[export_name =
                         "component:plugin/run#search"] unsafe extern "C" fn
                         export_search(arg0 : * mut u8, arg1 : usize,) -> * mut u8 {
                         $($path_to_types)*:: _export_search_cabi::<$ty > (arg0, arg1) }
                         #[export_name = "cabi_post_component:plugin/run#search"] unsafe
                         extern "C" fn _post_return_search(arg0 : * mut u8,) {
-                        $($path_to_types)*:: __post_return_search::<$ty > (arg0) } };
+                        $($path_to_types)*:: __post_return_search::<$ty > (arg0) }
+                        #[export_name = "component:plugin/run#add-to-contacts"] unsafe
+                        extern "C" fn export_add_to_contacts(arg0 : * mut u8, arg1 :
+                        usize, arg2 : * mut u8, arg3 : usize,) -> * mut u8 {
+                        $($path_to_types)*:: _export_add_to_contacts_cabi::<$ty > (arg0,
+                        arg1, arg2, arg3) } #[export_name =
+                        "cabi_post_component:plugin/run#add-to-contacts"] unsafe extern
+                        "C" fn _post_return_add_to_contacts(arg0 : * mut u8,) {
+                        $($path_to_types)*:: __post_return_add_to_contacts::<$ty > (arg0)
+                        } #[export_name = "component:plugin/run#contacts"] unsafe extern
+                        "C" fn export_contacts() -> * mut u8 { $($path_to_types)*::
+                        _export_contacts_cabi::<$ty > () } #[export_name =
+                        "cabi_post_component:plugin/run#contacts"] unsafe extern "C" fn
+                        _post_return_contacts(arg0 : * mut u8,) { $($path_to_types)*::
+                        __post_return_contacts::<$ty > (arg0) } };
                     };
                 }
                 #[doc(hidden)]
@@ -1220,39 +1449,41 @@ pub(crate) use __export_example_impl as export;
 #[cfg(target_arch = "wasm32")]
 #[link_section = "component-type:wit-bindgen:0.35.0:component:plugin:example:encoded world"]
 #[doc(hidden)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 1362] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xd4\x09\x01A\x02\x01\
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 1465] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xbb\x0a\x01A\x02\x01\
 A\x0d\x01B\x0e\x01r\x02\x04names\x05values\x04\0\x0cstring-event\x03\0\0\x01p}\x01\
 r\x02\x04names\x05value\x02\x04\0\x0bbytes-event\x03\0\x03\x01ps\x01r\x02\x04nam\
-es\x05value\x05\x04\0\x11string-list-event\x03\0\x06\x01q\x03\x04text\x01\x01\0\x05\
-bytes\x01\x04\0\x0bstring-list\x01\x07\0\x04\0\x05event\x03\0\x08\x01r\x04\x03ke\
-ys\x05codecs\x09threshold}\x05limit}\x04\0\x08key-args\x03\0\x0a\x01r\x02\x02mk\x02\
-\x04data\x02\x04\0\x0aprove-args\x03\0\x0c\x03\0\x14host:component/types\x05\0\x01\
-B\x10\x01p}\x01r\x02\x05topics\x04data\0\x04\0\x07publish\x03\0\x01\x01r\x02\x03\
-key\0\x05value\0\x04\0\x09put-keyed\x03\0\x03\x01q\x03\x03put\x01\0\0\x09put-key\
-ed\x01\x04\0\x03get\x01\0\0\x04\0\x0esystem-command\x03\0\x05\x01r\x02\x07reques\
-t\0\x07peer-ids\x04\0\x0cpeer-request\x03\0\x07\x01r\x02\x03key\0\x05value\0\x04\
-\0\x0aput-record\x03\0\x09\x01q\x09\x07publish\x01\x02\0\x09subscribe\x01s\0\x0b\
-unsubscribe\x01s\0\x06system\x01\x06\0\x0cpeer-request\x01\x08\0\x0aput-record\x01\
-\x0a\0\x0aget-record\x01\0\0\x0dget-providers\x01\0\0\x0fstart-providing\x01\0\0\
-\x04\0\x0call-commands\x03\0\x0b\x01ps\x01q\x04\x04data\x01\0\0\x02id\x01s\0\x09\
-providers\x01\x0d\0\x04none\0\0\x04\0\x0dreturn-values\x03\0\x0e\x03\0\x18host:c\
-omponent/peerpiper\x05\x01\x02\x03\0\0\x05event\x02\x03\0\0\x08key-args\x02\x03\0\
-\0\x0aprove-args\x02\x03\0\x01\x0call-commands\x02\x03\0\x01\x0dreturn-values\x01\
-B\x1c\x02\x03\x02\x01\x02\x04\0\x05event\x03\0\0\x02\x03\x02\x01\x03\x04\0\x08ke\
-y-args\x03\0\x02\x02\x03\x02\x01\x04\x04\0\x0aprove-args\x03\0\x04\x02\x03\x02\x01\
-\x05\x04\0\x0call-commands\x03\0\x06\x02\x03\x02\x01\x06\x04\0\x0dreturn-values\x03\
-\0\x08\x01q\x04\x0dinvalid-codec\x01s\0\x14wallet-uninitialized\0\0\x0emultikey-\
-error\x01s\0\x0dkey-not-found\x01s\0\x04\0\x08mk-error\x03\0\x0a\x01@\x01\x03evt\
-\x01\x01\0\x04\0\x04emit\x01\x0c\x01@\x01\x03msgs\x01\0\x04\0\x03log\x01\x0d\x01\
-@\0\0}\x04\0\x0brandom-byte\x01\x0e\x01p}\x01j\x01\x0f\x01\x0b\x01@\x01\x04args\x03\
-\0\x10\x04\0\x06get-mk\x01\x11\x01@\x01\x04args\x05\0\x10\x04\0\x05prove\x01\x12\
-\x01@\x01\x05order\x07\x01\0\x04\0\x05order\x01\x13\x01@\0\0s\x04\0\x09get-scope\
-\x01\x14\x03\0\x13host:component/host\x05\x07\x01B\x05\x01@\0\0s\x04\0\x04load\x01\
-\0\x01j\x01s\x01s\x01@\x01\x04vlads\0\x01\x04\0\x06search\x01\x02\x04\0\x14compo\
-nent:plugin/run\x05\x08\x04\0\x18component:plugin/example\x04\0\x0b\x0d\x01\0\x07\
-example\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.22\
-0.0\x10wit-bindgen-rust\x060.35.0";
+es\x05value\x05\x04\0\x11string-list-event\x03\0\x06\x01q\x04\x04save\0\0\x04tex\
+t\x01\x01\0\x05bytes\x01\x04\0\x0bstring-list\x01\x07\0\x04\0\x05event\x03\0\x08\
+\x01r\x04\x03keys\x05codecs\x09threshold}\x05limit}\x04\0\x08key-args\x03\0\x0a\x01\
+r\x02\x02mk\x02\x04data\x02\x04\0\x0aprove-args\x03\0\x0c\x03\0\x14host:componen\
+t/types\x05\0\x01B\x10\x01p}\x01r\x02\x05topics\x04data\0\x04\0\x07publish\x03\0\
+\x01\x01r\x02\x03key\0\x05value\0\x04\0\x09put-keyed\x03\0\x03\x01q\x03\x03put\x01\
+\0\0\x09put-keyed\x01\x04\0\x03get\x01\0\0\x04\0\x0esystem-command\x03\0\x05\x01\
+r\x02\x07request\0\x07peer-ids\x04\0\x0cpeer-request\x03\0\x07\x01r\x02\x03key\0\
+\x05value\0\x04\0\x0aput-record\x03\0\x09\x01q\x09\x07publish\x01\x02\0\x09subsc\
+ribe\x01s\0\x0bunsubscribe\x01s\0\x06system\x01\x06\0\x0cpeer-request\x01\x08\0\x0a\
+put-record\x01\x0a\0\x0aget-record\x01\0\0\x0dget-providers\x01\0\0\x0fstart-pro\
+viding\x01\0\0\x04\0\x0call-commands\x03\0\x0b\x01ps\x01q\x04\x04data\x01\0\0\x02\
+id\x01s\0\x09providers\x01\x0d\0\x04none\0\0\x04\0\x0dreturn-values\x03\0\x0e\x03\
+\0\x18host:component/peerpiper\x05\x01\x02\x03\0\0\x05event\x02\x03\0\0\x08key-a\
+rgs\x02\x03\0\0\x0aprove-args\x02\x03\0\x01\x0call-commands\x02\x03\0\x01\x0dret\
+urn-values\x01B\x1c\x02\x03\x02\x01\x02\x04\0\x05event\x03\0\0\x02\x03\x02\x01\x03\
+\x04\0\x08key-args\x03\0\x02\x02\x03\x02\x01\x04\x04\0\x0aprove-args\x03\0\x04\x02\
+\x03\x02\x01\x05\x04\0\x0call-commands\x03\0\x06\x02\x03\x02\x01\x06\x04\0\x0dre\
+turn-values\x03\0\x08\x01q\x04\x0dinvalid-codec\x01s\0\x14wallet-uninitialized\0\
+\0\x0emultikey-error\x01s\0\x0dkey-not-found\x01s\0\x04\0\x08mk-error\x03\0\x0a\x01\
+@\x01\x03evt\x01\x01\0\x04\0\x04emit\x01\x0c\x01@\x01\x03msgs\x01\0\x04\0\x03log\
+\x01\x0d\x01@\0\0}\x04\0\x0brandom-byte\x01\x0e\x01p}\x01j\x01\x0f\x01\x0b\x01@\x01\
+\x04args\x03\0\x10\x04\0\x06get-mk\x01\x11\x01@\x01\x04args\x05\0\x10\x04\0\x05p\
+rove\x01\x12\x01@\x01\x05order\x07\x01\0\x04\0\x05order\x01\x13\x01@\0\0s\x04\0\x09\
+get-scope\x01\x14\x03\0\x13host:component/host\x05\x07\x01B\x0f\x01@\0\0s\x04\0\x04\
+load\x01\0\x01@\0\x01\0\x04\0\x04init\x01\x01\x01ps\x01@\0\0\x02\x04\0\x08regist\
+er\x01\x03\x01j\0\x01s\x01@\x01\x04vlads\0\x04\x04\0\x06search\x01\x05\x01@\x02\x04\
+vlads\x08nicknames\0\x04\x04\0\x0fadd-to-contacts\x01\x06\x01p\x02\x01@\0\0\x07\x04\
+\0\x08contacts\x01\x08\x04\0\x14component:plugin/run\x05\x08\x04\0\x18component:\
+plugin/example\x04\0\x0b\x0d\x01\0\x07example\x03\0\0\0G\x09producers\x01\x0cpro\
+cessed-by\x02\x0dwit-component\x070.220.0\x10wit-bindgen-rust\x060.35.0";
 #[inline(never)]
 #[doc(hidden)]
 pub fn __link_custom_section_describing_imports() {

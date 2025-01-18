@@ -5,13 +5,31 @@ interface run {
   /// loads just the RDX for rendering
   load: func() -> string;
 
+  /// initialize the state of the component 
+  init: func();
+
+  /// Register wasm functions to be bound to Rhai
+  /// Returns a list of func names that are to be bound
+  register: func() -> list<string>;
+
   /// search for a peer by VLAD
-  search: func(vlad: string) -> result<string, string>;
+  search: func(vlad: string) -> result<_, string>;
+
+  /// Adds this vlad's nickname to contacts 
+  add-to-contacts: func(vlad: string, nickname: string) -> result<_, string>;
+
+  /// Contacts that are in our Book.
+  /// [vlad, nickname, notes]
+  contacts: func() -> list<list<string>>;
 }
+
 /// An example world for the component to target.
 world example {
   
+  /// Host interface is defined at ./deps/host.wit which is a symlink 
+  /// to the root directory of the host crate.
   import host:component/host;
 
+  /// Export our run interface
   export run;
 }
