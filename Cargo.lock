@@ -1367,9 +1367,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.9"
+version = "1.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8293772165d9345bdaaa39b45b2109591e63fe5e6fbc23c6ff930a048aa310b"
+checksum = "13208fcbb66eaeffe09b99fffbe1af420f00a7b35aa99ad683dfc1aa76145229"
 dependencies = [
  "jobserver",
  "libc",
@@ -2623,9 +2623,9 @@ dependencies = [
 
 [[package]]
 name = "enumflags2"
-version = "0.7.10"
+version = "0.7.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d232db7f5956f3f14313dc2f87985c58bd2c695ce124c8cdd984e08e15ac133d"
+checksum = "ba2f4b465f5318854c6f8dd686ede6c0a9dc67d4b1ac241cf0eb51521a309147"
 dependencies = [
  "enumflags2_derive",
  "serde",
@@ -2633,9 +2633,9 @@ dependencies = [
 
 [[package]]
 name = "enumflags2_derive"
-version = "0.7.10"
+version = "0.7.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de0d48a183585823424a4ce1aa132d174a6a81bd540895822eb4c8373a8e49e8"
+checksum = "fc4caf64a58d7a6d65ab00639b046ff54399a39f5f2554728895ace4b297cd79"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3462,7 +3462,7 @@ dependencies = [
 [[package]]
 name = "html-egui-bindgen"
 version = "0.1.0"
-source = "git+https://github.com/DougAnderson444/rdx.git#58f33caaed975765f569cb0f741bb04b60cd0eb2"
+source = "git+https://github.com/DougAnderson444/rdx.git#5c583ac1f01a3971e4037007007db0ca01a1ee36"
 dependencies = [
  "html",
  "html-to-egui",
@@ -3477,7 +3477,7 @@ checksum = "13eca55667a5657dd1b86db77c5fe2d1810e3f9413e9555a2c4c461733dd2573"
 [[package]]
 name = "html-to-egui"
 version = "0.1.1"
-source = "git+https://github.com/DougAnderson444/rdx.git#58f33caaed975765f569cb0f741bb04b60cd0eb2"
+source = "git+https://github.com/DougAnderson444/rdx.git#5c583ac1f01a3971e4037007007db0ca01a1ee36"
 dependencies = [
  "bon",
 ]
@@ -6911,7 +6911,7 @@ dependencies = [
 [[package]]
 name = "rdx"
 version = "0.2.1"
-source = "git+https://github.com/DougAnderson444/rdx.git#58f33caaed975765f569cb0f741bb04b60cd0eb2"
+source = "git+https://github.com/DougAnderson444/rdx.git#5c583ac1f01a3971e4037007007db0ca01a1ee36"
 dependencies = [
  "ahash",
  "anyhow",
@@ -6927,7 +6927,6 @@ dependencies = [
  "log",
  "markup5ever",
  "markup5ever_rcdom",
- "parking_lot",
  "rand",
  "rhai",
  "send_wrapper 0.6.0",
@@ -8319,9 +8318,9 @@ dependencies = [
 
 [[package]]
 name = "test-log"
-version = "0.2.16"
+version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3dffced63c2b5c7be278154d76b479f9f9920ed34e7574201407f0b14e2bbb93"
+checksum = "e7f46083d221181166e5b6f6b1e5f1d499f3a76888826e6cb1d057554157cd0f"
 dependencies = [
  "env_logger",
  "test-log-macros",
@@ -8330,9 +8329,9 @@ dependencies = [
 
 [[package]]
 name = "test-log-macros"
-version = "0.2.16"
+version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5999e24eaa32083191ba4e425deb75cdf25efefabe5aaccb7446dd0d4122a3f5"
+checksum = "888d0c3c6db53c0fdab160d2ed5e12ba745383d3e85813f2ea0f2b1475ab553f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8854,9 +8853,9 @@ dependencies = [
 
 [[package]]
 name = "valuable"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
+checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 
 [[package]]
 name = "vcpkg"
