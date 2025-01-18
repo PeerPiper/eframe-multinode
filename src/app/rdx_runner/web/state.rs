@@ -78,9 +78,8 @@ impl State {
 
     /// Initialize the state with a scope from storage, if it exists.
     /// Same steps as in new(), but using self.* instead.
-    pub fn init(&self) {
-        tracing::debug!("State::init() called for {:?}", self.inner.name);
-        let scope_clone = self.inner.scope.clone();
+    pub async fn init(&self) {
+        tracing::info!("State::init() called for {:?}", self.inner.name);
         if let Some(key) = self.inner.cid_map.get_string(&self.inner.name) {
             if let Ok(cid) = Cid::try_from(key.clone()) {
                 if self.inner.peerpiper.borrow().is_none() {
@@ -88,32 +87,35 @@ impl State {
                     return;
                 };
 
-                let piper_clone = self.inner.peerpiper.clone();
+                let name: String = self.inner.name.clone();
+                let pp = {
+                    tracing::info!("Borrow mut in init");
+                    let command = AllCommands::System(SystemCommand::Get { key: cid.into() });
+                    self.inner
+                        .peerpiper
+                        .borrow()
+                        .as_ref()
+                        .unwrap()
+                        .order(command)
+                        .await
+                };
 
-                platform::spawn(async move {
-                    let pp = {
-                        tracing::info!("Borrow mut in init");
-                        let command = AllCommands::System(SystemCommand::Get { key: cid.into() });
-                        piper_clone.borrow().as_ref().unwrap().order(command).await
-                    };
+                let Ok(ReturnValues::Data(bytes)) = pp else {
+                    tracing::warn!("Failed to get state from CID: {}", key);
+                    return;
+                };
 
-                    let Ok(ReturnValues::Data(bytes)) = pp else {
-                        tracing::warn!("Failed to get state from CID: {}", key);
-                        return;
-                    };
+                let str = String::from_utf8_lossy(&bytes);
 
-                    let str = String::from_utf8_lossy(&bytes);
+                let Ok(scope) = serde_json::from_str(&str) else {
+                    tracing::warn!("Failed to decode state scope from CID: {}", key);
+                    return;
+                };
 
-                    let Ok(scope) = serde_json::from_str(&str) else {
-                        tracing::warn!("Failed to decode state scope from CID: {}", key);
-                        return;
-                    };
-
-                    // set the plugin scope to the loaded scope,
-                    // this is how we load the state from disk into the plugin
-                    *scope_clone.borrow_mut() = scope;
-                    //tracing::info!("*** State loaded from commander: {:?}", scope_clone);
-                });
+                // set the plugin scope to the loaded scope,
+                // this is how we load the state from disk into the plugin
+                *self.inner.scope.borrow_mut() = scope;
+                tracing::info!("*** State loaded for {:?} ", name,);
             } else {
                 tracing::warn!("Failed to parse CID from string: {}", key);
             }
@@ -125,7 +127,7 @@ impl State {
     /// Persist the [rhai::Scope] state on disk
     ///
     /// Should work in both browser and native environments
-    pub async fn save(&self) -> anyhow::Result<String> {
+    pub async fn async_save(&self) -> anyhow::Result<String> {
         // save the state scope to disk.
         // Use put/get and get CID values, which you then map to plugin names and save THAT too.
         // Advantage of Option B is we can content address share plugin state scope.
@@ -162,18 +164,9 @@ impl State {
 }
 
 impl Inner for State {
-    /// Updates the scope variable to the given value
-    fn update(&mut self, key: &str, value: impl Into<Dynamic> + Clone) {
-        self.inner.scope.borrow_mut().set_value(key, value.into());
-
-        if let Some(egui_ctx) = &self.inner.egui_ctx {
-            tracing::info!("Requesting repaint");
-            egui_ctx.request_repaint();
-            // now that the rhai scope has been updated, we need to re-run
-        } else {
-            tracing::warn!("Egui context is not set");
-        }
-
+    /// Saves the state to disk
+    fn save(&self) {
+        tracing::info!("[web.save] Saving state for {:?}", self.inner.name);
         // Debounce the save operation by pushing the save time into the save_after field
         // and then spawning a task to save the state after the debounce time
         let self_clone = self.clone(); // our save() function lives here
@@ -187,12 +180,28 @@ impl Inner for State {
         let new_timer = Timeout::new(delay, || {
             platform::spawn(async move {
                 tracing::info!("Saving state after gloo_timer");
-                let cid = self_clone.save().await;
+                let cid = self_clone.async_save().await;
                 tracing::info!("State saved to CID: {:?}", cid);
             });
         });
 
         *timer.borrow_mut() = Some(new_timer);
+    }
+
+    /// Updates the scope variable to the given value
+    fn update(&mut self, key: &str, value: impl Into<Dynamic> + Clone) {
+        tracing::info!("[web.update] Updating scope with key: {}", key);
+        self.inner.scope.borrow_mut().set_value(key, value.into());
+
+        if let Some(egui_ctx) = &self.inner.egui_ctx {
+            tracing::info!("Requesting repaint");
+            egui_ctx.request_repaint();
+            // now that the rhai scope has been updated, we need to re-run
+        } else {
+            tracing::warn!("Egui context is not set");
+        }
+
+        self.save();
     }
 
     fn scope(&self) -> ScopeRef {

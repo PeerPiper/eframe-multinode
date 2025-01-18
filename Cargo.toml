@@ -37,7 +37,6 @@ log = "0.4"
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
 tracing = { version = "0.1", features = ["log"] }
-seed-keeper-core = { git = "https://github.com/DougAnderson444/seed-keeper.git" }
 egui_material_icons = "0.1.0"
 cloudflare = { version = "0.12.0", git = "https://github.com/cloudflare/cloudflare-rs.git" }
 reqwest = { version = "0.11.27", default-features = false, features = [
@@ -61,7 +60,6 @@ cid = "0.11.1"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-env_logger = "0.11"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tokio = { version = "1", features = [
   "time",
@@ -73,7 +71,6 @@ tokio = { version = "1", features = [
 peerpiper-plugins = { git = "https://github.com/PeerPiper/peerpiper.git" }
 peerpiper-native = { git = "https://github.com/PeerPiper/peerpiper.git" }
 rfd = "0.15" # Rust File Dialog 
-parking_lot = "0.12" # for better Mutex
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -88,8 +85,6 @@ web-sys = { version = "0.3.70", features = [
   "Storage",
   "Window",
 ] }
-getrandom = { version = "0.2", features = ["js"] }
-egui_suspense = "0.6.0"
 serde-wasm-bindgen = "0.6"
 peerpiper-browser = { git = "https://github.com/PeerPiper/peerpiper.git" }
 tokio = { version = "1", features = ["sync"] }
@@ -118,6 +113,8 @@ opt-level = 2
 
 # [patch.'https://github.com/DougAnderson444/rdx.git']
 # rdx = { version = "0.2.1", path = "../rdx" }
+# html-to-egui = { path = "../rdx/crates/html-to-egui" }
+# html-egui-bindgen = { path = "../rdx/crates/html-egui-bindgen" }
 
 # If you want to use the bleeding edge version of egui and eframe:
 # egui = { git = "https://github.com/emilk/egui", branch = "master" }

@@ -126,40 +126,51 @@ impl RdxRunner {
         );
 
         // a closure that enables us to register a function by name with zero arguments
-        let register = |deets: &mut PluginDeets<State>, fn_name, args| {
+        fn register(deets: &mut PluginDeets<State>, fn_name: String, arguments: Vec<Value>) {
             let plugin_clone = deets.plugin.clone();
-            deets.engine.register_fn(fn_name, move || {
-                let res = {
-                    //let plugin_clone = plugin_clone.deref();
-                    let mut lock = plugin_clone.lock().unwrap();
-                    lock.call(fn_name, args).unwrap()
-                };
+            deets
+                .engine
+                .borrow_mut()
+                .register_fn(fn_name.clone(), move || {
+                    let res = {
+                        //let plugin_clone = plugin_clone.deref();
+                        let mut lock = plugin_clone.lock().unwrap();
+                        lock.call(&fn_name, &arguments).unwrap()
+                    };
 
-                res.map(|v| match v {
-                    Value::Bool(b) => Dynamic::from(b),
-                    Value::Option(ov) => match ov.deref().clone() {
-                        Some(Value::Bool(b)) => Dynamic::from(b),
-                        Some(Value::List(list)) => {
-                            let list = list
-                                .into_iter()
-                                .map(|v| match v {
-                                    Value::String(s) => Dynamic::from(s),
-                                    Value::U8(u) => Dynamic::from(u),
-                                    Value::Bool(b) => Dynamic::from(b),
-                                    _ => Dynamic::from("Unsupported type"),
-                                })
-                                .collect::<Vec<_>>();
-                            Dynamic::from(list)
+                    // a recurive function that converts List type into Dynamic type
+                    fn value_to_dynamic(v: Value) -> Dynamic {
+                        match v {
+                            Value::Bool(b) => Dynamic::from(b),
+                            Value::Option(ov) => match ov.deref().clone() {
+                                Some(v) => value_to_dynamic(v),
+                                None => false.into(),
+                            },
+                            Value::String(s) => Dynamic::from(s.to_string()),
+                            Value::U8(u) => Dynamic::from(u),
+                            Value::List(list) => {
+                                let list =
+                                    list.into_iter().map(value_to_dynamic).collect::<Vec<_>>();
+                                Dynamic::from(list)
+                            }
+                            Value::Tuple(t) => {
+                                let t = t.into_iter().map(value_to_dynamic).collect::<Vec<_>>();
+                                Dynamic::from(t)
+                            }
+                            Value::F32(f) => Dynamic::from(f),
+                            Value::F64(f) => Dynamic::from(f),
+                            Value::U32(u) => Dynamic::from(u),
+                            Value::U64(u) => Dynamic::from(u),
+                            _ => false.into(),
                         }
-                        _ => false.into(),
-                    },
-                    _ => false.into(),
-                })
-                .unwrap_or(false.into())
-            });
-        };
+                    }
 
-        register(&mut wallet_deets, "unlocked", &[]);
+                    // convert the returned result into Dynamic type
+                    res.map(value_to_dynamic).unwrap_or(false.into())
+                });
+        }
+
+        register(&mut wallet_deets, "unlocked".to_string(), vec![]);
 
         all_plugin_deets.insert(wallet_name.to_string(), wallet_deets);
 
@@ -198,10 +209,33 @@ impl RdxRunner {
                 .insert(name.to_string(), arc_plugin.clone());
 
             let mut plugin_deets =
-                PluginDeets::new(name.to_string(), arc_plugin, rdx_source.to_string());
+                PluginDeets::new(name.to_string(), arc_plugin.clone(), rdx_source.to_string());
 
             // register get_mk with rhai, so we can bind it inthe plugin and call it from rhai scripts
-            register(&mut plugin_deets, "getmk", &[]);
+            register(&mut plugin_deets, "getmk".to_string(), vec![]);
+
+            // Netx we call "register" on the plugin to get any plugin-specific functions
+            // that need to be registered with the rhai engine.
+            // This can fail, as not all plugins have functions to register.
+            match arc_plugin.lock().unwrap().call("register", &[]) {
+                // If Ok and a List of Strings, then iterate over these strings and rgister them
+                Ok(Some(Value::List(list))) => {
+                    for fn_name in &list {
+                        if let Value::String(fn_name) = fn_name {
+                            tracing::info!(
+                                "Registering function: {:?} from plugin: {:?}",
+                                fn_name,
+                                name
+                            );
+                            register(&mut plugin_deets, fn_name.to_string(), vec![]);
+                        }
+                    }
+                }
+                Ok(_) => {}
+                Err(e) => {
+                    tracing::warn!("Failed to call register on plugin: {:?}", e);
+                }
+            }
 
             all_plugin_deets.insert(name.to_string(), plugin_deets);
         }
@@ -256,14 +290,18 @@ impl RdxRunner {
                     .iter()
                 {
                     tracing::info!("Initializing plugin: {:?}", name);
-                    let mut plugin = arc_plugin.lock().unwrap();
-                    plugin.store().data().init();
+                    let state = {
+                        let plugin = arc_plugin.lock().unwrap();
+                        plugin.store().data().clone()
+                    };
+                    state.init().await;
                     tracing::info!("Initialized plugin: {:?}", name);
 
                     // once the scope is loaded, we should call the init() function
                     // to intiiate the plugin with the given state
                     // wasm32 happens here, whereas native happens in the loop above after
                     // State::new() is called
+                    let mut plugin = arc_plugin.lock().unwrap();
                     if let Err(e) = plugin.call("init", &[]) {
                         // it's ok not to have an init function
                         // the plugin just won't be initialized with any loaded scope

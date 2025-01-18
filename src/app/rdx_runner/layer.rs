@@ -415,12 +415,15 @@ pub fn instantiate_instance<T: Inner + Clone + Send + Sync + 'static>(
     //
     ///// Event is a variant of string and bytes events.
     //variant event {
+    //  save,
     //  text(string-event),
     //  bytes(bytes-event),
     //  string-list(string-list-event)
     //}
 
-    let text_variant = VariantCase::new(
+    let save_variant_case = VariantCase::new("save", None);
+
+    let text_variant_case = VariantCase::new(
         "text",
         Some(ValueType::Record(
             RecordType::new(
@@ -456,8 +459,16 @@ pub fn instantiate_instance<T: Inner + Clone + Send + Sync + 'static>(
         )),
     );
 
-    let event =
-        VariantType::new(None, vec![text_variant, bytes_variant, string_list_variant]).unwrap();
+    let event = VariantType::new(
+        None,
+        vec![
+            save_variant_case,
+            text_variant_case,
+            bytes_variant,
+            string_list_variant,
+        ],
+    )
+    .unwrap();
 
     host_interface
         .define_func(
@@ -467,50 +478,66 @@ pub fn instantiate_instance<T: Inner + Clone + Send + Sync + 'static>(
                 FuncType::new([ValueType::Variant(event)], []),
                 move |mut store, params, _results| {
                     if let Value::Variant(variant) = &params[0] {
-                        if let Some(Value::Record(record)) = variant.value() {
-                            // record is either: string-event, bytes-event, string-list-event
-                            match record.field("value") {
-                                Some(Value::String(value)) => {
+                        match variant.ty().cases()[variant.discriminant()].name() {
+                            "save" => {
+                                tracing::info!("Save event");
+                                store.data().save();
+                            }
+                            "text" => {
+                                tracing::info!("Text event {:?}", variant.value());
+                                if let Some(Value::Record(record)) = variant.value() {
                                     if let Some(Value::String(name)) = record.field("name") {
-                                        store.data_mut().update(&name, &*value);
+                                        if let Some(Value::String(value)) = record.field("value") {
+                                            tracing::info!(
+                                                "[layer]: Name: {}, Value: {}",
+                                                name,
+                                                value
+                                            );
+                                            store.data_mut().update(&name, &*value);
+                                        }
                                     }
                                 }
-                                Some(Value::List(list)) => {
-                                    //tracing::debug!("Emitting list: {:?}", list);
-                                    let vals = list
-                                        .iter()
-                                        .map(|v| match v {
-                                            Value::U8(u) => Dynamic::from(u),
-                                            Value::String(s) => {
-                                                let s: String = s.to_string();
-                                                Dynamic::from(s)
-                                            }
-                                            Value::List(lis) => lis
+                            }
+                            "bytes" => {
+                                if let Some(Value::Record(record)) = variant.value() {
+                                    if let Some(Value::String(name)) = record.field("name") {
+                                        if let Some(Value::List(list)) = record.field("value") {
+                                            let vals = list
                                                 .iter()
                                                 .map(|v| match v {
                                                     Value::U8(u) => Dynamic::from(u),
                                                     Value::String(s) => {
-                                                        Dynamic::from(s.to_string())
+                                                        let s: String = s.to_string();
+                                                        Dynamic::from(s)
                                                     }
                                                     _ => Dynamic::from("Unsupported type"),
                                                 })
-                                                .collect::<Vec<_>>()
-                                                .into(),
-                                            _ => Dynamic::from("Unsupported type"),
-                                        })
-                                        .collect::<Vec<_>>();
-                                    //tracing::debug!("Emitting list: {:?}", vals);
-                                    if let Some(Value::String(name)) = record.field("name") {
-                                        //tracing::debug!(
-                                        //    "Emitting name value pair: {:?} {:?}",
-                                        //    name,
-                                        //    vals
-                                        //);
-                                        store.data_mut().update(&name, &*vals);
+                                                .collect::<Vec<_>>();
+                                            store.data_mut().update(&name, &*vals);
+                                        }
                                     }
                                 }
-                                _ => {}
                             }
+                            "string-list" => {
+                                if let Some(Value::Record(record)) = variant.value() {
+                                    if let Some(Value::String(name)) = record.field("name") {
+                                        if let Some(Value::List(list)) = record.field("value") {
+                                            let vals = list
+                                                .iter()
+                                                .map(|v| match v {
+                                                    Value::String(s) => {
+                                                        let s: String = s.to_string();
+                                                        Dynamic::from(s)
+                                                    }
+                                                    _ => Dynamic::from("Unsupported type"),
+                                                })
+                                                .collect::<Vec<_>>();
+                                            store.data_mut().update(&name, &*vals);
+                                        }
+                                    }
+                                }
+                            }
+                            _ => {}
                         }
                     }
 
@@ -1152,7 +1179,7 @@ pub fn instantiate_instance<T: Inner + Clone + Send + Sync + 'static>(
                                                     #[cfg(not(target_arch = "wasm32"))]
                                                     {
                                                         let mut scope_binding =
-                                                            command_record.lock();
+                                                            command_record.lock().unwrap();
 
                                                         let value_map = match scope_binding
                                                             .get_value_mut::<Dynamic>(
@@ -1258,7 +1285,7 @@ pub fn instantiate_instance<T: Inner + Clone + Send + Sync + 'static>(
                                                         #[cfg(not(target_arch = "wasm32"))]
                                                         {
                                                             let mut scope_binding =
-                                                                command_record.lock();
+                                                                command_record.lock().unwrap();
 
                                                             let value_map = match scope_binding
                                                                 .get_value_mut::<Dynamic>(

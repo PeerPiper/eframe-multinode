@@ -15,9 +15,9 @@ use rdx::layer::{
     Inner,
 };
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
 
-use parking_lot::Mutex as ParkingMutex;
 use tokio::sync::Mutex as AsyncMutex;
 
 use super::debouncer::Debouncer;
@@ -31,7 +31,7 @@ pub struct State {
     /// The [Scope] that holds the state of the plugin.
     ///
     /// It's Arc Mutex so we can update it as a result of an async task.
-    scope: Arc<ParkingMutex<Scope<'static>>>,
+    scope: Arc<Mutex<Scope<'static>>>,
     /// The [egui::Context] that holds the UI state. Used to request repaints
     egui_ctx: Option<egui::Context>,
     /// Handler to PeerPiper SystemCommander
@@ -94,7 +94,7 @@ impl State {
         }
 
         Self {
-            scope: Arc::new(ParkingMutex::new(scope)),
+            scope: Arc::new(Mutex::new(scope)),
             egui_ctx: ctx,
             name: name.clone().as_ref().to_string(),
             peerpiper,
@@ -106,7 +106,7 @@ impl State {
     /// Persist the [rhai::Scope] state on disk
     ///
     /// Should work in both browser and native environments
-    pub async fn save(&self) -> anyhow::Result<String> {
+    pub async fn async_save(&self) -> anyhow::Result<String> {
         // save the state scope to disk.
         // Use put/get and get CID values, which you then map to plugin names and save THAT too.
         // Advantage of Option B is we can content address share plugin state scope.
@@ -114,7 +114,7 @@ impl State {
         // data changes.
 
         // get a clone of the scope
-        let scope = self.scope.lock().clone();
+        let scope = self.scope.lock().unwrap().clone();
 
         tracing::info!("Saving state: {:?}", scope);
 
@@ -142,25 +142,13 @@ impl State {
 
 impl Inner for State {
     /// Updates the scope variable to the given value
-    fn update(&mut self, key: &str, value: impl Into<Dynamic> + Clone) {
-        self.scope.lock().set_value(key, value.clone().into());
-
-        tracing::info!("State updated: {} = {:?}", key, value.into());
-
-        if let Some(egui_ctx) = &self.egui_ctx {
-            tracing::info!("Requesting repaint");
-            egui_ctx.request_repaint();
-            // now that the rhai scope has been updated, we need to re-run
-        } else {
-            tracing::warn!("Egui context is not set");
-        }
-
+    fn save(&self) {
         let state_clone = self.clone();
         let callback = move || {
             let state = state_clone.clone();
             platform::spawn(async move {
                 tracing::info!("Saving state");
-                match state.save().await {
+                match state.async_save().await {
                     Ok(cid) => {
                         tracing::info!("State saved to CID: {:?}", cid);
                     }
@@ -186,17 +174,38 @@ impl Inner for State {
         });
     }
 
+    /// Updates the scope variable to the given value
+    fn update(&mut self, key: &str, value: impl Into<Dynamic> + Clone) {
+        tracing::info!("Updating state: {} = {:?}", key, value.clone().into());
+        self.scope
+            .lock()
+            .unwrap()
+            .set_value(key, value.clone().into());
+
+        tracing::info!("State updated: {} = {:?}", key, value.into());
+
+        if let Some(egui_ctx) = &self.egui_ctx {
+            tracing::info!("Requesting repaint");
+            egui_ctx.request_repaint();
+            // now that the rhai scope has been updated, we need to re-run
+        } else {
+            tracing::warn!("Egui context is not set");
+        }
+
+        self.save();
+    }
+
     fn scope(&self) -> ScopeRef {
         ScopeRef::Borrowed(self.scope.clone())
     }
 
     fn scope_mut(&mut self) -> ScopeRefMut {
-        ScopeRefMut::Borrowed(self.scope.lock())
+        ScopeRefMut::Borrowed(self.scope.lock().unwrap())
     }
 
     // into_scope with 'static lifetime'
     fn into_scope(self) -> Scope<'static> {
-        self.scope.lock().clone() // creates a completely new copy of the inner data
+        self.scope.lock().unwrap().clone() // creates a completely new copy of the inner data
     }
 }
 

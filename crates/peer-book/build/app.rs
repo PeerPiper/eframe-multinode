@@ -2,45 +2,13 @@
 //!
 //! This could be it's own app in ot's own crate for code sharing and whatnot,
 //! but for now we'll just keep it together with the plugin code.
-use html_egui_bindgen::{Button, Division, Input, Label, Paragraph};
-use html_to_egui::{Action, DivSelectors, Handler};
+use html_egui_bindgen::{Button, Division, Input, Label, Paragraph, Span};
+use html_to_egui::{Action, Handler, Selectors};
 
-//  Below is the equivalent for this:
-//    r#"
-//render(`
-//    <Vertical>
-//        <Label>Peer Book</Label>
-//        <TextEdit>{{vlad}}</TextEdit>
-//        <Button on_click=search(vlad)>Search</Button>
-//        ${if is_def_var("get_record") {
-//            // loop over get_record and display the key and optional result if it exists
-//            get_record.values().map(|val| {
-//                `
-//                <Horizontal>
-//                    <Label>${val}</Label>
-//                </Horizontal>
-//                `
-//            })
-//            .reduce(|acc, x| acc + x)
-//
-//        } else {
-//            `<Label>Enter a VLAD to search.</Label>`
-//        }}
-//    </Vertical>
-//`)
-//"#
 pub(crate) fn gen_script() -> String {
     let peer_book_label = Label::builder().text("Peer Book").build();
 
-    let vlad_input = Input::new_with_func(
-        Action::OnChange,
-        Handler::builder()
-            .named("set_vlad".to_string())
-            .args(vec!["vlad".to_string()])
-            .build(),
-    )
-    .value("{{vlad}}")
-    .build();
+    let vlad_input = Input::builder().value("{{vlad}}").build();
 
     let search_button = Button::new_with_func(
         Action::OnClick,
@@ -61,11 +29,38 @@ pub(crate) fn gen_script() -> String {
 
     let no_get_record = Paragraph::builder().text("Enter a VLAD to search.").build();
 
+    // Has record should show:
+    // "Found. Add to contacts?" with an input field for the nickname,
+    // and a button to add to contacts.
     let has_get_record = Division::builder()
         .push(
             Division::builder()
                 .push(Label::builder().text("${val}").build())
-                .class(DivSelectors::FlexRow)
+                .class(Selectors::FlexRow)
+                .build(),
+        )
+        // push a child div with 1) input field for nickname, 2) button to add to contacts
+        .push(
+            Division::builder()
+                .push(
+                    Label::builder()
+                        .text("Found Vlad! Add nickname to contacts?")
+                        .build(),
+                )
+                .push(Input::builder().value("{{nickname}}").build())
+                .push(
+                    Button::new_with_func(
+                        Action::OnClick,
+                        Handler::builder()
+                            // We will create a wit interface caled add-to-contacts, and a
+                            // wasm function in our Rust lib.rs called add_to_contacts
+                            .named("add-to-contacts".to_string())
+                            .args(vec!["vlad".to_string(), "nickname".to_string()])
+                            .build(),
+                    )
+                    .text("Add to contacts")
+                    .build(),
+                )
                 .build(),
         )
         .build()
@@ -87,19 +82,70 @@ pub(crate) fn gen_script() -> String {
     );
 
     let rhai_control_section = Division::builder()
+        // We could also do this: instead of 3 text()s, we could do .with_rhai(inner_logic)
+        //.with_rhai(inner_logic)
         .text("${ ")
         .text(inner_logic)
         .text(" } ")
         .build();
 
+    // Lastly, we want to list out every vlad & nickname we have added.
+    // We have registered a function called `contacts: func() -> list>list<string>>`
+    // which gives us a list of contacts' vladid, nickname and notes.
+    // So in this section, we call that function, then if not false,
+    // iterate over the results and display them.
+    // let nickname = "nickname";
+    // let notes = "notes";
+    // let vlad = "vlad";
+    let show_contact = Division::builder()
+        .push(Span::builder().text("${vlad}").build())
+        .push(Span::builder().text("${nickname}").build())
+        .push(Span::builder().text("${notes}").build())
+        .class(Selectors::FlexRow)
+        .build()
+        .to_string();
+
+    let show_contacts_block = Division::builder()
+        .with_rhai(format!(
+            r#"
+    // Save the loaded contacts from wasm into rhai Scope.
+    // This should persist them for the next time we load the plugin.
+
+    // loop over contacts and display the vlad and nickname and notes 
+    if contacts().len() > 0 {{
+        contacts().map(|contact| {{
+            let vlad = contact[0];
+            let nickname = contact[1];
+            let notes = contact[2];
+
+            `{show_contact}`
+
+        }})
+        .reduce(|acc, s| acc + s, "")
+    }} else {{
+        "<p>No contacts found.</p>"
+        }}
+"#
+        ))
+        .build();
+
+    let contacts = Division::builder()
+        .push(
+            Paragraph::builder()
+                .text("List Vlad nicknames from our PeerBook")
+                .build(),
+        )
+        .push(show_contacts_block)
+        .build()
+        .to_string();
+
     format!(
         r#"
 // peer-book.rhai 
 // This is rhai script, controlling the logic flow of what html fragments to render.
-// The rhai will check for the presence of get_record via is_def_var("get_record")
-// 
-// Next, it depends on whether get_record is defined or not
-// To inject the rhai logic in the middle of this html, we use dollar sign plus brakets
+
+// Here, we call the function "render" which is 'registered' witht the rhai engine,
+// so it will call some Rust code to show the rendered html.
 render(`
 <!-- First we show the search vlad section -->
 {search_div}
@@ -107,6 +153,8 @@ render(`
 <!-- Next we show the results of the search -->
 {rhai_control_section}
 
+<!-- List Vlad & Nicknames in our PeerBook -->
+{contacts}
 `)
 
 "#

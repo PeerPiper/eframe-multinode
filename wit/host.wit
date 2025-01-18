@@ -16,7 +16,7 @@ interface types {
     value: list<u8>
   }
 
-  /// Event wherte there is a list of strings 
+  /// Event where there is a list of strings 
   record string-list-event {
     /// The variable name
     name: string,
@@ -25,6 +25,9 @@ interface types {
 
   /// Event is a variant of string and bytes events. 
   variant event {
+    /// Save all the rhai Scope to disk.
+    save,
+    /// Add this string key value pair to the scope.
     text(string-event),
     bytes(bytes-event),
     string-list(string-list-event)
