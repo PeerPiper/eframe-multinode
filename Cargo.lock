@@ -929,7 +929,7 @@ dependencies = [
  "getrandom",
  "rhai",
  "serde_json",
- "wit-bindgen-rt",
+ "wit-bindgen-rt 0.36.0",
 ]
 
 [[package]]
@@ -2477,6 +2477,7 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasmparser 0.221.2",
  "web-sys",
+ "web-time",
 ]
 
 [[package]]
@@ -3119,7 +3120,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4271d37baee1b8c7e4b708028c57d816cf9d2434acb33a549475f78c181f6253"
 dependencies = [
  "fallible-iterator",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "stable_deref_trait",
 ]
 
@@ -3130,7 +3131,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40ecd4077b5ae9fd2e9e169b102c6c330d0605168eb0e8bf79952b256dbefffd"
 dependencies = [
  "fallible-iterator",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "stable_deref_trait",
 ]
 
@@ -3141,7 +3142,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
 dependencies = [
  "fallible-iterator",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "stable_deref_trait",
 ]
 
@@ -3289,7 +3290,7 @@ dependencies = [
  "futures-sink",
  "futures-util",
  "http",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "slab",
  "tokio",
  "tokio-util",
@@ -3462,7 +3463,6 @@ dependencies = [
 [[package]]
 name = "html-egui-bindgen"
 version = "0.1.0"
-source = "git+https://github.com/DougAnderson444/rdx.git#5c583ac1f01a3971e4037007007db0ca01a1ee36"
 dependencies = [
  "html",
  "html-to-egui",
@@ -3477,8 +3477,8 @@ checksum = "13eca55667a5657dd1b86db77c5fe2d1810e3f9413e9555a2c4c461733dd2573"
 [[package]]
 name = "html-to-egui"
 version = "0.1.1"
-source = "git+https://github.com/DougAnderson444/rdx.git#5c583ac1f01a3971e4037007007db0ca01a1ee36"
 dependencies = [
+ "ahash",
  "bon",
 ]
 
@@ -3847,9 +3847,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.7.0"
+version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62f822373a4fe84d4bb149bf54e584a7f4abec90e072ed49cda0edea5b95471f"
+checksum = "8c9c992b02b5b4c94ea26e32fe5bccb7aa7d9f390ab5c1221ff895bc7ea8b652"
 dependencies = [
  "equivalent",
  "hashbrown 0.15.2",
@@ -3940,9 +3940,9 @@ dependencies = [
 
 [[package]]
 name = "ipnet"
-version = "2.10.1"
+version = "2.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ddc24109865250148c2e0f3d25d4f0f479571723792d3802153c60922a4fb708"
+checksum = "469fb0b9cefa57e3ef31275ee7cacb78f2fdca44e4765491884a2b119d4eb130"
 
 [[package]]
 name = "is_terminal_polyfill"
@@ -5902,7 +5902,7 @@ checksum = "a6a622008b6e321afc04970976f62ee297fdbaa6f95318ca343e3eebb9648441"
 dependencies = [
  "crc32fast",
  "hashbrown 0.14.5",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "memchr",
 ]
 
@@ -5914,7 +5914,7 @@ checksum = "62948e14d923ea95ea2c7c86c71013138b66525b86bdc08d2dcc262bdb497b87"
 dependencies = [
  "crc32fast",
  "hashbrown 0.15.2",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "memchr",
 ]
 
@@ -6164,13 +6164,13 @@ dependencies = [
  "rand",
  "rhai",
  "serde_json",
- "wit-bindgen-rt",
+ "wit-bindgen-rt 0.36.0",
 ]
 
 [[package]]
 name = "peerpiper"
 version = "0.2.0"
-source = "git+https://github.com/PeerPiper/peerpiper.git#f9ec456bd87bb762874776586844e8bfe62801c9"
+source = "git+https://github.com/PeerPiper/peerpiper.git#d6eeaca026275476089a434f007fd31c43e86963"
 dependencies = [
  "cfg-if",
  "futures",
@@ -6185,7 +6185,7 @@ dependencies = [
 [[package]]
 name = "peerpiper-browser"
 version = "0.1.8"
-source = "git+https://github.com/PeerPiper/peerpiper.git#f9ec456bd87bb762874776586844e8bfe62801c9"
+source = "git+https://github.com/PeerPiper/peerpiper.git#d6eeaca026275476089a434f007fd31c43e86963"
 dependencies = [
  "anyhow",
  "blockstore",
@@ -6218,7 +6218,7 @@ dependencies = [
 [[package]]
 name = "peerpiper-core"
 version = "0.3.0"
-source = "git+https://github.com/PeerPiper/peerpiper.git#f9ec456bd87bb762874776586844e8bfe62801c9"
+source = "git+https://github.com/PeerPiper/peerpiper.git#d6eeaca026275476089a434f007fd31c43e86963"
 dependencies = [
  "base64 0.20.0",
  "beetswap",
@@ -6247,7 +6247,7 @@ dependencies = [
 [[package]]
 name = "peerpiper-native"
 version = "0.1.0"
-source = "git+https://github.com/PeerPiper/peerpiper.git#f9ec456bd87bb762874776586844e8bfe62801c9"
+source = "git+https://github.com/PeerPiper/peerpiper.git#d6eeaca026275476089a434f007fd31c43e86963"
 dependencies = [
  "anyhow",
  "blockstore",
@@ -6268,7 +6268,7 @@ dependencies = [
 [[package]]
 name = "peerpiper-plugins"
 version = "0.1.0"
-source = "git+https://github.com/PeerPiper/peerpiper.git#f9ec456bd87bb762874776586844e8bfe62801c9"
+source = "git+https://github.com/PeerPiper/peerpiper.git#d6eeaca026275476089a434f007fd31c43e86963"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6400,6 +6400,18 @@ name = "pin-utils"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
+
+[[package]]
+name = "pipepad"
+version = "0.1.0"
+dependencies = [
+ "getrandom",
+ "html-egui-bindgen",
+ "html-to-egui",
+ "rhai",
+ "serde_json",
+ "wit-bindgen-rt 0.37.0",
+]
 
 [[package]]
 name = "piper"
@@ -6911,7 +6923,6 @@ dependencies = [
 [[package]]
 name = "rdx"
 version = "0.2.1"
-source = "git+https://github.com/DougAnderson444/rdx.git#5c583ac1f01a3971e4037007007db0ca01a1ee36"
 dependencies = [
  "ahash",
  "anyhow",
@@ -7530,9 +7541,9 @@ dependencies = [
 
 [[package]]
 name = "semver"
-version = "1.0.24"
+version = "1.0.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3cb6eb87a131f756572d7fb904f6e7b68633f09cca868c5df1c4b8d1a694bbba"
+checksum = "f79dfe2d285b0488816f30e700a7438c5a73d816b5b7d3ac72fbc48b0d185e03"
 dependencies = [
  "serde",
 ]
@@ -7643,9 +7654,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.135"
+version = "1.0.137"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b0d7ba2887406110130a978386c4e1befb98c674b4fba677954e4db976630d9"
+checksum = "930cfb6e6abf99298aaad7d29abbef7a9999a9a8806a40088f55f0dcec03146b"
 dependencies = [
  "itoa",
  "memchr",
@@ -7796,9 +7807,9 @@ checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
 
 [[package]]
 name = "similar"
-version = "2.6.0"
+version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1de1d4f81173b03af4c0cbed3c898f6bff5b870e4a7f5d6f4057d62a7a4b686e"
+checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
 dependencies = [
  "bstr",
  "unicode-segmentation",
@@ -8596,7 +8607,7 @@ version = "0.22.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ae48d6208a266e853d946088ed816055e556cc6028c5e8e2b84d9fa5dd7c7f5"
 dependencies = [
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "serde",
  "serde_spanned",
  "toml_datetime",
@@ -8934,7 +8945,7 @@ dependencies = [
  "getrandom",
  "rand",
  "seed-keeper-core",
- "wit-bindgen-rt",
+ "wit-bindgen-rt 0.36.0",
 ]
 
 [[package]]
@@ -9103,7 +9114,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "18ebaa7bd0f9e7a5e5dd29b9a998acf21c4abed74265524dd7e85934597bfb10"
 dependencies = [
  "anyhow",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "serde",
  "serde_derive",
  "serde_json",
@@ -9149,7 +9160,7 @@ version = "0.118.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77f1154f1ab868e2a01d9834a805faca7bf8b50d041b4ca714d005d0dab1c50c"
 dependencies = [
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "semver",
 ]
 
@@ -9160,7 +9171,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c35daf77afb4f9b14016625144a391085ec2ca99ca9cc53ed291bb53ab5278d"
 dependencies = [
  "bitflags 2.8.0",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "semver",
 ]
 
@@ -9171,7 +9182,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9dbe55c8f9d0dbd25d9447a5a889ff90c0cc3feaa7395310d3d826b2c703eaab"
 dependencies = [
  "bitflags 2.8.0",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "semver",
 ]
 
@@ -9184,7 +9195,7 @@ dependencies = [
  "ahash",
  "bitflags 2.8.0",
  "hashbrown 0.14.5",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "semver",
  "serde",
 ]
@@ -9198,7 +9209,7 @@ dependencies = [
  "ahash",
  "bitflags 2.8.0",
  "hashbrown 0.14.5",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "semver",
  "serde",
 ]
@@ -9211,7 +9222,7 @@ checksum = "9845c470a2e10b61dd42c385839cdd6496363ed63b5c9e420b5488b77bd22083"
 dependencies = [
  "bitflags 2.8.0",
  "hashbrown 0.15.2",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "semver",
  "serde",
 ]
@@ -9223,7 +9234,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d5a99faceb1a5a84dd6084ec4bfa4b2ab153b5793b43fd8f58b89232634afc35"
 dependencies = [
  "bitflags 2.8.0",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "semver",
 ]
 
@@ -9276,7 +9287,7 @@ dependencies = [
  "fxprof-processed-profile",
  "gimli 0.29.0",
  "hashbrown 0.14.5",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "ittapi",
  "libc",
  "libm",
@@ -9327,7 +9338,7 @@ dependencies = [
  "cc",
  "cfg-if",
  "hashbrown 0.14.5",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "libc",
  "libm",
  "log",
@@ -9502,7 +9513,7 @@ dependencies = [
  "bincode",
  "cranelift-entity 0.105.4",
  "gimli 0.28.1",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "log",
  "object 0.32.2",
  "serde",
@@ -9527,7 +9538,7 @@ dependencies = [
  "cranelift-bitset 0.112.3",
  "cranelift-entity 0.112.3",
  "gimli 0.29.0",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "log",
  "object 0.36.7",
  "postcard",
@@ -9553,7 +9564,7 @@ dependencies = [
  "cranelift-bitset 0.113.1",
  "cranelift-entity 0.113.1",
  "gimli 0.31.1",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "log",
  "object 0.36.7",
  "postcard",
@@ -9734,7 +9745,7 @@ checksum = "3f571f63ac1d532e986eb3973bbef3a45e4ae83de521a8d573b0fe0594dc9608"
 dependencies = [
  "anyhow",
  "heck 0.4.1",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "wit-parser 0.217.0",
 ]
 
@@ -9746,7 +9757,7 @@ checksum = "4bef2a726fd8d1ee9b0144655e16c492dc32eb4c7c9f7e3309fcffe637870933"
 dependencies = [
  "anyhow",
  "heck 0.5.0",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "wit-parser 0.218.0",
 ]
 
@@ -10676,6 +10687,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "wit-bindgen-rt"
+version = "0.37.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc801b991c56492f87ab3086e786468f75c285a4d73017ab0ebc2fa1aed5d82c"
+dependencies = [
+ "bitflags 2.8.0",
+]
+
+[[package]]
 name = "wit-component"
 version = "0.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10683,7 +10703,7 @@ checksum = "429e3c06fba3a7566aab724ae3ffff3152ede5399d44789e7dd11f5421292859"
 dependencies = [
  "anyhow",
  "bitflags 2.8.0",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "log",
  "serde",
  "serde_derive",
@@ -10702,7 +10722,7 @@ checksum = "316b36a9f0005f5aa4b03c39bc3728d045df136f8c13a73b7db4510dec725e08"
 dependencies = [
  "anyhow",
  "id-arena",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "log",
  "semver",
  "serde",
@@ -10719,7 +10739,7 @@ checksum = "fb893dcd6d370cfdf19a0d9adfcd403efb8e544e1a0ea3a8b81a21fe392eaa78"
 dependencies = [
  "anyhow",
  "id-arena",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "log",
  "semver",
  "serde",
@@ -10737,7 +10757,7 @@ checksum = "0d3d1066ab761b115f97fef2b191090faabcb0f37b555b758d3caf42d4ed9e55"
 dependencies = [
  "anyhow",
  "id-arena",
- "indexmap 2.7.0",
+ "indexmap 2.7.1",
  "log",
  "semver",
  "serde",

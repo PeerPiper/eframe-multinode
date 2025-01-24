@@ -5,12 +5,14 @@ mod rdx_runner;
 
 pub(crate) use platform::Platform;
 use platform::Settings;
+use rdx::layer::Inner as _;
 use rdx_runner::RdxRunner;
+use web_time::Instant;
 
 const APP_KEY: &str = concat!("eframe-app-", env!("CARGO_PKG_NAME"));
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(Default, serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize)]
 //#[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct MultinodeApp {
     /// Platform  specific handlers for native and web     
@@ -20,6 +22,30 @@ pub struct MultinodeApp {
     file_dialog: file_dialog::FileDialog,
 
     settings: Settings,
+
+    /// Last time we saved the app state
+    #[serde(skip, default = "default_last_save")]
+    last_save: Instant,
+
+    /// If the backup save has been used or not
+    #[serde(skip, default)]
+    needs_save: bool,
+}
+
+impl Default for MultinodeApp {
+    fn default() -> Self {
+        Self {
+            platform: Platform::default(),
+            file_dialog: file_dialog::FileDialog::default(),
+            settings: Settings::default(),
+            last_save: default_last_save(),
+            needs_save: true,
+        }
+    }
+}
+
+fn default_last_save() -> Instant {
+    Instant::now()
 }
 
 impl MultinodeApp {
@@ -49,12 +75,38 @@ impl eframe::App for MultinodeApp {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         tracing::info!("💾 Saving app state");
         eframe::set_value(storage, APP_KEY, self);
+        // also call State's Inner::save for each plugin state
+        self.platform
+            .rdx_runner
+            .plugins
+            .iter_mut()
+            .for_each(|(_name, plugin)| {
+                plugin.plugin.lock().unwrap().store().data().save();
+            });
+        self.last_save = Instant::now();
+    }
+
+    fn auto_save_interval(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(20) // Set autosave interval to 20 seconds
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
+
+        if self.needs_save && self.last_save.elapsed().as_secs() >= 30 {
+            tracing::info!("💾 Backup save, saving app state");
+            self.platform
+                .rdx_runner
+                .plugins
+                .iter_mut()
+                .for_each(|(_name, plugin)| {
+                    plugin.plugin.lock().unwrap().store().data().save();
+                });
+            self.last_save = Instant::now();
+            self.needs_save = false;
+        }
 
         // pass the ctx to the platform
         if !self.platform.egui_ctx() {
