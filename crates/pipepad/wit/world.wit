@@ -1,0 +1,26 @@
+package component:plugin;
+
+interface run {
+  
+  /// loads just the RDX for rendering
+  load: func() -> string;
+
+  /// initialize the state of the component 
+  init: func();
+
+  /// Register wasm functions to be bound to Rhai
+  /// Returns a list of func names that are to be bound
+  register: func() -> list<string>;
+
+}
+
+/// An example world for the component to target.
+world example {
+  
+  /// Host interface is defined at ./deps/host.wit which is a symlink 
+  /// to the root directory of the host crate.
+  import host:component/host;
+
+  /// Export our run interface
+  export run;
+}

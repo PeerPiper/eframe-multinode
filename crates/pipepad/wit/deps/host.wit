@@ -1,0 +1,175 @@
+//! Commond types that each plugin has access to.
+package host:component;
+
+interface types {
+  /// Event type where value is a string.
+  record string-event {
+    /// The variable name
+    name: string,
+    value: string
+  }
+
+  /// Event type where value is a list<u8>.
+  record bytes-event {
+    /// The variable name
+    name: string,
+    value: list<u8>
+  }
+
+  /// Event where there is a list of strings 
+  record string-list-event {
+    /// The variable name
+    name: string,
+    value: list<string>
+  }
+
+  /// Event is a variant of string and bytes events. 
+  variant event {
+    /// Save all the rhai Scope to disk.
+    save,
+    /// Add this string key value pair to the scope.
+    text(string-event),
+    bytes(bytes-event),
+    string-list(string-list-event)
+  }
+
+  /// Key arguments for getting a Multikey
+  record key-args {
+    /// The key
+    key: string,
+    /// The codec
+    codec: string,
+    /// THreshold 
+    threshold: u8,
+    /// Limit 
+    limit: u8
+  }
+
+  record prove-args {
+    /// The Multikey
+    mk: list<u8>,
+    /// The data
+    data: list<u8>,
+  }
+}
+
+interface peerpiper {
+  
+  /// Publsih data to a topic 
+  record publish {
+    /// The topic
+    topic: string,
+    /// The data
+    data: list<u8>
+  }
+
+  record put-keyed {
+    /// The key
+    key: list<u8>,
+    /// The value
+    value: list<u8>,
+  }
+
+  variant system-command {
+    /// Put bytes on the local disk 
+    put(list<u8>),
+    /// Puts Keyed bytes into the local disk 
+    put-keyed(put-keyed),
+    /// Get bytes from the local disk
+    get(list<u8>),
+  }
+
+  /// Make a Rwquest from a Peer
+  /// The request is encoded as a list of bytes 
+  record peer-request {
+    /// The request
+    request: list<u8>,
+    /// The peer id
+    peer-id: string
+  }
+
+  /// Put bytes in the DHT 
+  record put-record {
+    /// The key
+    key: list<u8>,
+    /// The value
+    value: list<u8>
+  }
+
+  variant all-commands {
+    /// Publish data to a topic 
+    publish(publish),
+    /// Subscribe to a topic
+    subscribe(string),
+    /// Unsubscribe from a topic
+    unsubscribe(string),
+    /// System commands are a subset of [AllCommands] that do not go to the network, but come
+    /// from componets to direct the system to do something, like save bytes to a file.
+    system(system-command),
+    /// Please peer, do something with this data and give me a response
+    peer-request(peer-request),
+    /// Puts a Record on the DHT, and optionally provides the data for Pinning 
+    put-record(put-record),
+    /// Gets a Record from the DHT 
+    get-record(list<u8>),
+    /// Gets the Providers of a Record on the DHT
+    get-providers(list<u8>),
+    /// Start Providing a Record on the DHT
+    start-providing(list<u8>),
+  }
+
+  variant return-values {
+    /// The data
+    data(list<u8>),
+    /// The ID
+    id(string),
+    /// The providers
+    providers(list<string>),
+    /// None
+    none,
+  }
+
+}
+
+interface host {
+  use types.{event, key-args, prove-args};
+  use peerpiper.{all-commands, return-values};
+
+  /// emit an event.
+  emit: func(evt: event);
+
+  /// log a message.
+  log: func(msg: string);
+
+  /// get a random byte
+  random-byte: func() -> u8;
+
+  /// get-mk Error type 
+  variant mk-error {
+    /// The error message
+    invalid-codec(string),
+    /// Wallet uninitialized 
+    wallet-uninitialized,
+    /// Mulitkey Error 
+    multikey-error(string),
+    /// Key not found 
+    key-not-found(string),
+  }
+
+  /// Gets the Multikey 
+  get-mk: func(args: key-args) -> result<list<u8>, mk-error>;
+
+  /// Proves the data for the given Multikey.
+  prove: func(args: prove-args) -> result<list<u8>, mk-error>;
+
+  /// Order PeerPiper to do something.
+  order: func(order: all-commands); // -> return-values;
+
+  /// Gets the current rhai scope from the host, if available. 
+  get-scope: func() -> string;
+}
+
+world host-world {
+  export types;
+  export host;
+}

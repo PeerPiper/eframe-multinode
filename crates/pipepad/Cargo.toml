@@ -1,0 +1,26 @@
+[package]
+name = "pipepad"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+wit-bindgen-rt = { version = "0.37.0", features = ["bitflags"] }
+getrandom = { version = "0.2", features = ["custom"] }
+serde_json = "1.0"
+rhai = { version = "1.20.1", features = ["serde"] }
+
+[build-dependencies]
+html-to-egui = { workspace = true }
+html-egui-bindgen = { workspace = true }
+rhai = { workspace = true }
+
+[lib]
+crate-type = ["cdylib"]
+
+[package.metadata.component]
+package = "component:pipepad"
+
+[package.metadata.component.dependencies]
+
+[package.metadata.component.target.dependencies]
+"host:component" = { path = "wit/deps" }
