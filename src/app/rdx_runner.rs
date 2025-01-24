@@ -63,36 +63,10 @@ impl RdxRunner {
         let mut builtins = crate::BUILTIN_PLUGINS.to_vec();
 
         let (wallet_name, wallet_bytes) = builtins
-            // find position and remove it into wallet_plugin var
             .iter()
-            // starts with `wallet_plugin`
             .position(|(name, _)| *name == "wallet_plugin.wasm")
             .map(|i| builtins.remove(i))
             .unwrap();
-
-        //#[cfg(not(target_arch = "wasm32"))]
-        //let peerpiper = Arc::new(AsyncMutex::new(None));
-        //#[cfg(target_arch = "wasm32")]
-        //let peerpiper = Rc::new(RefCell::new(None));
-        //
-        //let peerpiper_clone = peerpiper.clone();
-        //#[cfg(target_arch = "wasm32")]
-        //let (sender, receiver) = futures::channel::oneshot::channel::<()>();
-        //
-        //platform::spawn(async move {
-        //    let peerpiper = PeerPiper::new(commander);
-        //    //let peerpiper = create_peerpiper().await.unwrap_or_else(|e| {
-        //    //    panic!("Failed to create PeerPiper: {:?}", e);
-        //    //});
-        //    #[cfg(not(target_arch = "wasm32"))]
-        //    peerpiper_clone.lock().await.replace(peerpiper);
-        //    #[cfg(target_arch = "wasm32")]
-        //    peerpiper_clone.borrow_mut().replace(peerpiper);
-        //
-        //    tracing::info!("PeerPiper created");
-        //    #[cfg(target_arch = "wasm32")]
-        //    sender.send(()).unwrap();
-        //});
 
         // Since the browser is so much slower than native,
         // We need to gather up the arc_wallet and all the arc_plugins

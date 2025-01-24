@@ -141,7 +141,7 @@ impl State {
 }
 
 impl Inner for State {
-    /// Updates the scope variable to the given value
+    /// Saves the plugin rhai Scope to disk.
     fn save(&self) {
         let state_clone = self.clone();
         let callback = move || {

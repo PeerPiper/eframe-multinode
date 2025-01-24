@@ -8,7 +8,7 @@
 async fn main() -> eframe::Result {
     let _ = tracing_subscriber::fmt()
         .with_env_filter(
-            "eframe_multinode=debug,rdx=debug,peerpiper_*=trace,peerpiper_core=trace,peerpiper_native=debug,cranelift_codegen=off,beetswap=trace",
+            "eframe_multinode=debug,rdx=debug,peerpiper_*=trace,peerpiper_core=debug,peerpiper_native=debug,cranelift_codegen=off,beetswap=trace",
         )
         .try_init();
 
