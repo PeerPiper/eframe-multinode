@@ -25,7 +25,7 @@ use crate::app::rdx_runner::RdxRunner;
 use super::piper::PeerPiper;
 
 pub fn spawn(f: impl Future<Output = ()> + Send + 'static) {
-    tracing::debug!("Spawning tokio task");
+    tracing::trace!("Spawning tokio task");
     tokio::spawn(f);
 }
 
