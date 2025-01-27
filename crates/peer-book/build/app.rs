@@ -98,7 +98,7 @@ pub(crate) fn gen_script() -> String {
     // let notes = "notes";
     // let vlad = "vlad";
     let show_contact = Division::builder()
-        .push(Span::builder().text("${vlad}").build())
+        //.push(Span::builder().text("${vlad}").build())
         .push(Span::builder().text("${nickname}").build())
         .push(Span::builder().text("${notes}").build())
         .class(Selectors::FlexRow)

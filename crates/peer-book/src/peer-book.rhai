@@ -40,7 +40,7 @@ render(`
             let nickname = contact[1];
             let notes = contact[2];
 
-            `<div class="flex-row"><span>${vlad}</span><span>${nickname}</span><span>${notes}</span></div>`
+            `<div class="flex-row"><span>${nickname}</span><span>${notes}</span></div>`
 
         })
         .reduce(|acc, s| acc + s, "")
