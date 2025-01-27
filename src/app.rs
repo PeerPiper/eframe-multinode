@@ -1,8 +1,10 @@
 mod error;
-mod file_dialog;
 mod platform;
 mod rdx_runner;
 
+use std::collections::BTreeSet;
+
+use egui::ScrollArea;
 pub(crate) use platform::Platform;
 use platform::Settings;
 use rdx::layer::Inner as _;
@@ -19,8 +21,6 @@ pub struct MultinodeApp {
     #[serde(skip)]
     platform: Platform,
 
-    file_dialog: file_dialog::FileDialog,
-
     settings: Settings,
 
     /// Last time we saved the app state
@@ -30,16 +30,19 @@ pub struct MultinodeApp {
     /// If the backup save has been used or not
     #[serde(skip, default)]
     needs_save: bool,
+
+    /// Open plugins
+    open: BTreeSet<String>,
 }
 
 impl Default for MultinodeApp {
     fn default() -> Self {
         Self {
             platform: Platform::default(),
-            file_dialog: file_dialog::FileDialog::default(),
             settings: Settings::default(),
             last_save: default_last_save(),
             needs_save: true,
+            open: BTreeSet::new(),
         }
     }
 }
@@ -133,6 +136,42 @@ impl eframe::App for MultinodeApp {
             });
         });
 
+        let plugin_names = self
+            .platform
+            .rdx_runner
+            .plugins
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>(); // clone keys to avoid borrowing issues
+
+        egui::SidePanel::left("plugin_panel")
+            .resizable(false)
+            .default_width(160.0)
+            .min_width(160.0)
+            .show(ctx, |ui| {
+                ui.add_space(4.0);
+                ui.vertical_centered(|ui| {
+                    ui.heading("🔌 Plugins");
+                });
+
+                ui.separator();
+
+                self.platform.load_plugin(ctx, ui);
+
+                ui.separator();
+                ScrollArea::vertical().show(ui, |ui| {
+                    ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
+                        // list plugins here
+                        for name in plugin_names {
+                            let open = &mut self.open;
+                            let mut is_open = open.contains(&name);
+                            ui.toggle_value(&mut is_open, name.clone());
+                            set_open(open, &name, is_open);
+                        }
+                    });
+                });
+            });
+
         egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 powered_by_egui_and_eframe(ui);
@@ -148,16 +187,6 @@ impl eframe::App for MultinodeApp {
             // We needs a wallet widget first, to unlock with username and password.
 
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("Load Plugin");
-
-            let platform_loader = self.platform.loader.clone();
-            let on_load_callback = move |name, bytes| {
-                platform_loader.load_plugin(name, bytes);
-            };
-
-            if let Err(e) = self.file_dialog.file_dialog(ui, on_load_callback) {
-                tracing::error!("Failed to open file dialog: {:?}", e);
-            }
 
             ui.vertical(|ui| {
                 if let Some(addr) = self.platform.addr() {
@@ -169,10 +198,24 @@ impl eframe::App for MultinodeApp {
 
             // Show plugins
             let RdxRunner { plugins, .. } = &mut self.platform.rdx_runner;
-            for (_name, plugin) in plugins.iter_mut() {
+            for (name, plugin) in plugins.iter_mut() {
+                // if is open
+                if !self.open.contains(name) {
+                    continue;
+                }
                 plugin.render_rhai(ctx.clone());
             }
         });
+    }
+}
+
+fn set_open(open: &mut BTreeSet<String>, key: &String, is_open: bool) {
+    if is_open {
+        if !open.contains(key) {
+            open.insert(key.to_owned());
+        }
+    } else {
+        open.remove(key);
     }
 }
 

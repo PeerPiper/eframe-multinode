@@ -50,7 +50,7 @@ struct InnerState {
     timer: Rc<RefCell<Option<Timeout>>>,
 }
 
-//pub fn sleep(dur: Duration) -> impl Future<Output = ()> {
+//pub fn sleep(dur: web_time::Duration) -> impl futures::Future<Output = ()> {
 //    gloo_timers::future::TimeoutFuture::new(dur.as_millis() as u32)
 //}
 

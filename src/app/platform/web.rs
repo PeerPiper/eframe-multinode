@@ -65,14 +65,14 @@ impl ContextSet {
 }
 
 #[derive(Clone, Default)]
-pub(crate) struct Loader;
-
-impl Loader {
-    /// Load a plugin into the Platform
-    pub fn load_plugin(&self, _name: String, _wasm: Vec<u8>) {
-        // TODO: Web plugins
-    }
+pub(crate) struct Loader {
+    /// Name of the plugin
+    pub(crate) name: String,
+    /// Plugin bytes
+    pub(crate) bytes: Vec<u8>,
 }
+
+impl Loader {}
 
 // allow unused code
 #[allow(dead_code)]
@@ -83,8 +83,8 @@ pub struct Platform {
     /// The node multiaddr to which we are connected
     node_multiaddr: String,
 
-    /// Plugin Loader
-    pub loader: Loader,
+    /// Plugin bytes Loader
+    pub loader: Arc<Mutex<Option<Loader>>>,
 
     /// RDX Runner
     pub rdx_runner: RdxRunner,
@@ -109,19 +109,41 @@ impl Default for Platform {
             let peerpiper = PeerPiper::new(blockstore, arc_collection_plugins.clone());
 
             // signal to the rdx_runner that the peerpiper is ready
-            tracing::info!("PeerPiper created, sending ready signal to rdx_runner");
             if let Err(_) = sender.send(peerpiper) {
                 tracing::error!("Error sending ready signal to rdx_runner");
             }
         });
 
-        let rdx_runner = RdxRunner::new(peerpiper.clone(), None, receiver);
+        let mut rdx_runner = RdxRunner::new(peerpiper.clone(), None, receiver);
+
+        let mut builtins = crate::BUILTIN_PLUGINS.to_vec();
+
+        // the wallet_plugin needs to be separate from the other plugins
+        // because it's exports (get-mk, prove) become the imports for
+        // the other plugins.
+        // Getthe single `wallet_plugin` from `BUILTIN_PLUGINS`,
+        // and put the remaining in `rest` array.
+        let (wallet_name, wallet_bytes) = builtins
+            .iter()
+            .position(|(name, _)| *name == "wallet_plugin.wasm")
+            .map(|i| builtins.remove(i))
+            .unwrap();
+
+        let arc_wallet = rdx_runner.load(wallet_name, wallet_bytes);
+
+        // set self.arc_wallet to arc_wallet
+        rdx_runner.arc_wallet = Some(arc_wallet);
+
+        // now the rest of the plugins
+        for (name, bytes) in builtins {
+            let _ = rdx_runner.load(name, bytes);
+        }
 
         Self {
             ctx: Rc::new(RefCell::new(ContextSet::new())),
             node_multiaddr: "/dnsaddr/peerpiper.io".to_string(),
             rdx_runner,
-            loader: Loader,
+            loader: Default::default(),
             peerpiper,
         }
     }
@@ -171,6 +193,29 @@ impl Platform {
         // TODO: use peerpiper.connect(libp2p_endpoints, on_event) to connect to the network
     }
 
+    /// Load a plugin with the given name and bytes
+    pub(crate) fn load_plugin(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
+        // Check self.loader for the plugin details
+        // If it's there, take the bytes out and load the plugin:
+        if let Some(loader) = self.loader.lock().unwrap().take() {
+            self.rdx_runner.load(&loader.name, &loader.bytes);
+            ctx.request_repaint();
+        }
+
+        if ui.button("Pick plugin file…").clicked() {
+            let task = rfd::AsyncFileDialog::new().pick_file();
+            let loader_clone = Arc::clone(&self.loader);
+            platform::spawn(async move {
+                if let Some(file) = task.await {
+                    let name = file.file_name();
+                    let bytes = file.read().await;
+
+                    let mut loader = loader_clone.lock().unwrap();
+                    *loader = Some(Loader { name, bytes });
+                }
+            });
+        }
+    }
     /// Connect to node multiaddr and show the state.
     /// Similar to fetch above, uses some of the ame code and logic,
     /// but additionally calls peerpiper commander connect() to actually make the connection.
@@ -195,8 +240,6 @@ impl Platform {
             connect_state.error = Default::default();
             connect_state.is_loading = true;
 
-            // Clone URL for async operation
-            let url = url.clone();
             let ctx_clone = ctx.clone();
 
             // show our loading spinner now
@@ -208,38 +251,57 @@ impl Platform {
             let pp_clone = self.peerpiper.clone();
             let (on_event, mut rx_evts) = tokio::sync::mpsc::channel(16);
 
-            platform::spawn(async move {
-                // Fetch data
-                match fetch_dns_query(url).await {
-                    Ok(libp2p_endpoints) => {
-                        let listen = {
-                            match pp_clone
-                                .borrow_mut()
-                                .as_mut()
-                                .unwrap()
-                                .connect(libp2p_endpoints)
-                                .await
-                            {
-                                Ok(listen) => listen,
-                                Err(e) => {
-                                    tracing::error!("Failed to connect to the network: {:?}", e);
-                                    return;
-                                }
-                            }
-                        };
+            let maddr = self.addr();
 
-                        listen(on_event);
+            platform::spawn(async move {
+                // if addr is a dnsaddr, fecth dns first to get the libp2p endpoints
+                let libp2p_endpoints = if let Some(addr) = maddr {
+                    if addr
+                        .iter()
+                        .any(|protocol| matches!(protocol, multiaddr::Protocol::Dns(_)))
+                    {
+                        fetch_dns_query(addr.to_string())
+                            .await
+                            .map_err(|e| {
+                                connect_state_clone.error =
+                                    Some(format!("Could not fetch endpoints. Error: {:?}", e));
+                                connect_state_clone.is_loading = false;
+                                connect_state_clone.response = vec!["Endpoints Error".to_string()];
+                                ctx_clone.data_mut(|data| {
+                                    data.insert_temp(state_id, connect_state_clone);
+                                });
+                            })
+                            .unwrap_or_default()
+                    } else {
+                        vec![addr.to_string()]
                     }
-                    Err(e) => {
-                        connect_state_clone.error =
-                            Some(format!("Could not fetch endpoints. Error: {:?}", e));
-                        connect_state_clone.is_loading = false;
-                        connect_state_clone.response = vec!["Endpoints Error".to_string()];
-                        ctx_clone.data_mut(|data| {
-                            data.insert_temp(state_id, connect_state_clone);
-                        });
+                } else {
+                    connect_state_clone.error = Some("Invalid multiaddress".to_string());
+                    connect_state_clone.is_loading = false;
+                    connect_state_clone.response = vec!["Invalid multiaddress".to_string()];
+                    ctx_clone.data_mut(|data| {
+                        data.insert_temp(state_id, connect_state_clone);
+                    });
+                    return;
+                };
+
+                let listen = {
+                    match pp_clone
+                        .borrow_mut()
+                        .as_mut()
+                        .unwrap()
+                        .connect(libp2p_endpoints)
+                        .await
+                    {
+                        Ok(listen) => listen,
+                        Err(e) => {
+                            tracing::error!("Failed to connect to the network: {:?}", e);
+                            return;
+                        }
                     }
                 };
+
+                listen(on_event);
             });
 
             let mut connect_state_clone = connect_state.clone();
@@ -324,59 +386,4 @@ impl Platform {
             }
         });
     }
-    ///// Pass Platform commands along as PeerPiper comamnds to the PeerPiper commander instance
-    //pub async fn command(&self, command: AllCommands) -> Result<ReturnValue, Error> {
-    //    let Some(piper) = self.commander.borrow().as_ref() else {
-    //        return Err(Error::CommanderNotReady);
-    //    };
-    //
-    //    Ok(piper.order(command).await?)
-    //}
 }
-
-///// Try to connect to the list of endpoints.
-///// Send the `on_event` callback to the Commander to be called when an event is received.
-//pub async fn connect(
-//    mut commander: Commander<Blockstore>,
-//    libp2p_endpoints: Vec<String>,
-//) -> Result<mpsc::Receiver<Events>, Error> {
-//    // 16 is arbitrary, but should be enough for now
-//    let (tx_evts, rx_evts) = mpsc::channel(16);
-//
-//    // client sync oneshot
-//    let (tx_client, rx_client) = oneshot::channel();
-//
-//    // command_sender will be used by other wasm_bindgen functions to send commands to the network
-//    // so we will need to wrap it in a Mutex or something to make it thread safe.
-//    let (network_command_sender, network_command_receiver) = tokio::sync::mpsc::channel(8);
-//
-//    let bstore = commander.blockstore.clone();
-//
-//    platform::spawn(async move {
-//        peerpiper::start(
-//            tx_evts,
-//            network_command_receiver,
-//            tx_client,
-//            libp2p_endpoints,
-//            bstore,
-//        )
-//        .await
-//        .expect("never end")
-//    });
-//
-//    // wait on rx_client to get the client handle
-//    let client_handle = rx_client.await?;
-//
-//    commander
-//        .with_network(network_command_sender)
-//        .with_client(client_handle);
-//
-//    //while let Some(event) = rx_evts.next().await {
-//    //    if let peerpiper::core::events::Events::Outer(event) = event {
-//    //        tracing::debug!("[Browser] Received event: {:?}", &event);
-//    //        on_event.send(event).await?;
-//    //    }
-//    //}
-//
-//    Ok(rx_evts)
-//}

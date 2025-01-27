@@ -56,30 +56,11 @@ impl ContextSet {
     }
 }
 
-#[derive(Clone)]
-pub(crate) struct Loader;
-
-impl Loader {
-    /// Load a plugin into the Platform
-    pub fn load_plugin(&self, _name: String, _wasmm: Vec<u8>) {
-        // call self.loader.load_plugin(name, wasm).await from this sync function using tokio
-        //let mut loader = self.0.clone();
-        //tokio::task::spawn(async move {
-        //    if let Err(e) = loader.load_plugin(name, &wasm).await {
-        //        tracing::error!("Failed to load plugin: {:?}", e);
-        //    }
-        //});
-    }
-}
-
 pub(crate) struct Platform {
     log: Arc<Mutex<Vec<String>>>,
 
     /// Clone of the [egui::Context] so that the platform can trigger repaints
     ctx: Arc<Mutex<ContextSet>>,
-
-    /// Gives the Platform the ability to load plugins
-    pub loader: Loader,
 
     /// The address of the node
     addr: Arc<Mutex<Option<Multiaddr>>>,
@@ -102,8 +83,17 @@ impl Default for Platform {
 
         super::spawn(async move {
             // 1. First we need a NativeBlockstore from NativeBlockstoreBuilder
-            let blockstore = NativeBlockstoreBuilder::default().open().await.unwrap();
-            tx.send(blockstore).unwrap();
+            let blockstore = NativeBlockstoreBuilder::default();
+            let blockstore = blockstore
+                .open()
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to open blockstore: {:?}", e);
+                })
+                .unwrap();
+            if let Err(e) = tx.send(blockstore) {
+                tracing::error!("Failed to send blockstore: {:?}", e);
+            }
         });
 
         let blockstore = rx.recv().unwrap();
@@ -187,13 +177,35 @@ impl Default for Platform {
             }
         });
 
-        let rdx_runner = RdxRunner::new(peerpiper, None);
+        let mut rdx_runner = RdxRunner::new(peerpiper, None);
+
+        let mut builtins = crate::BUILTIN_PLUGINS.to_vec();
+
+        // the wallet_plugin needs to be separate from the other plugins
+        // because it's exports (get-mk, prove) become the imports for
+        // the other plugins.
+        // Getthe single `wallet_plugin` from `BUILTIN_PLUGINS`,
+        // and put the remaining in `rest` array.
+        let (wallet_name, wallet_bytes) = builtins
+            .iter()
+            .position(|(name, _)| *name == "wallet_plugin.wasm")
+            .map(|i| builtins.remove(i))
+            .unwrap();
+
+        let arc_wallet = rdx_runner.load(wallet_name, wallet_bytes);
+
+        // set self.arc_wallet to arc_wallet
+        rdx_runner.arc_wallet = Some(arc_wallet);
+
+        // now the rest of the plugins
+        for (name, bytes) in builtins {
+            let _ = rdx_runner.load(name, bytes);
+        }
 
         Self {
             log,
             ctx,
             addr,
-            loader: Loader,
             rdx_runner,
         }
     }
@@ -207,17 +219,6 @@ impl Drop for Platform {
 }
 
 impl Platform {
-    ///// Load a plugin into the Platform put it in arc_collection of plugins
-    //pub fn load_plugin(&self, name: String, wasm: Vec<u8>) {
-    //    // call self.loader.load_plugin(name, wasm).await from this sync function using tokio
-    //    let mut loader = self.loader.clone();
-    //    tokio::task::spawn(async move {
-    //        if let Err(e) = loader.load_plugin(name, &wasm).await {
-    //            tracing::error!("Failed to load plugin: {:?}", e);
-    //        }
-    //    });
-    //}
-
     /// Returns whether the ctx is set or not
     pub(crate) fn egui_ctx(&self) -> bool {
         self.ctx.lock().unwrap().set
@@ -253,5 +254,20 @@ impl Platform {
 
     pub(crate) fn addr(&self) -> Option<Multiaddr> {
         self.addr.lock().unwrap().clone()
+    }
+
+    /// Load a plugin with the given name and bytes
+    pub(crate) fn load_plugin(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
+        if ui.button("Pick plugin file…").clicked() {
+            if let Some(path) = rfd::FileDialog::new().pick_file() {
+                let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+                // load the file bytes
+                let bytes = std::fs::read(&path)
+                    .unwrap_or_else(|err| panic!("Failed to read file: {}", err));
+
+                self.rdx_runner.load(&file_name, &bytes);
+                ctx.request_repaint();
+            }
+        }
     }
 }

@@ -58,6 +58,7 @@ chrono = "0.4"
 blockstore = "0.7.1"
 cid = "0.11.1"
 web-time = "1.1.0"
+rfd = "0.15" # Rust File Dialog 
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -71,7 +72,6 @@ tokio = { version = "1", features = [
 ] }
 peerpiper-plugins = { git = "https://github.com/PeerPiper/peerpiper.git" }
 peerpiper-native = { git = "https://github.com/PeerPiper/peerpiper.git" }
-rfd = "0.15" # Rust File Dialog 
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -114,10 +114,10 @@ opt-level = 2
 # peerpiper-native = { path = "../peerpiper/crates/peerpiper-native" }
 # peerpiper-browser = { path = "../peerpiper/crates/peerpiper-browser" }
 
-[patch.'https://github.com/DougAnderson444/rdx.git']
-rdx = { version = "0.2.1", path = "../rdx" }
-html-to-egui = { path = "../rdx/crates/html-to-egui" }
-html-egui-bindgen = { path = "../rdx/crates/html-egui-bindgen" }
+# [patch.'https://github.com/DougAnderson444/rdx.git']
+# rdx = { version = "0.2.1", path = "../rdx" }
+# html-to-egui = { path = "../rdx/crates/html-to-egui" }
+# html-egui-bindgen = { path = "../rdx/crates/html-egui-bindgen" }
 
 # If you want to use the bleeding edge version of egui and eframe:
 # egui = { git = "https://github.com/emilk/egui", branch = "master" }
