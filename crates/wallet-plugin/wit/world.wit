@@ -26,6 +26,10 @@ interface run {
   /// loads just the XML like markdown
   load: func() -> string;
 
+  /// Register wasm functions to be bound to Rhai
+  /// Returns a list of func names that are to be bound
+  register: func() -> list<string>;
+
   /// create a seed and lock it 
   create: func(username: string, password: string);
 

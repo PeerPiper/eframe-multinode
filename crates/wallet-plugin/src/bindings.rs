@@ -1088,6 +1088,59 @@ pub mod exports {
                 }
                 #[doc(hidden)]
                 #[allow(non_snake_case)]
+                pub unsafe fn _export_register_cabi<T: Guest>() -> *mut u8 {
+                    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
+                    let result0 = T::register();
+                    let ptr1 = _RET_AREA.0.as_mut_ptr().cast::<u8>();
+                    let vec3 = result0;
+                    let len3 = vec3.len();
+                    let layout3 = _rt::alloc::Layout::from_size_align_unchecked(
+                        vec3.len() * 8,
+                        4,
+                    );
+                    let result3 = if layout3.size() != 0 {
+                        let ptr = _rt::alloc::alloc(layout3).cast::<u8>();
+                        if ptr.is_null() {
+                            _rt::alloc::handle_alloc_error(layout3);
+                        }
+                        ptr
+                    } else {
+                        ::core::ptr::null_mut()
+                    };
+                    for (i, e) in vec3.into_iter().enumerate() {
+                        let base = result3.add(i * 8);
+                        {
+                            let vec2 = (e.into_bytes()).into_boxed_slice();
+                            let ptr2 = vec2.as_ptr().cast::<u8>();
+                            let len2 = vec2.len();
+                            ::core::mem::forget(vec2);
+                            *base.add(4).cast::<usize>() = len2;
+                            *base.add(0).cast::<*mut u8>() = ptr2.cast_mut();
+                        }
+                    }
+                    *ptr1.add(4).cast::<usize>() = len3;
+                    *ptr1.add(0).cast::<*mut u8>() = result3;
+                    ptr1
+                }
+                #[doc(hidden)]
+                #[allow(non_snake_case)]
+                pub unsafe fn __post_return_register<T: Guest>(arg0: *mut u8) {
+                    let l0 = *arg0.add(0).cast::<*mut u8>();
+                    let l1 = *arg0.add(4).cast::<usize>();
+                    let base4 = l0;
+                    let len4 = l1;
+                    for i in 0..len4 {
+                        let base = base4.add(i * 8);
+                        {
+                            let l2 = *base.add(0).cast::<*mut u8>();
+                            let l3 = *base.add(4).cast::<usize>();
+                            _rt::cabi_dealloc(l2, l3, 1);
+                        }
+                    }
+                    _rt::cabi_dealloc(base4, len4 * 8, 4);
+                }
+                #[doc(hidden)]
+                #[allow(non_snake_case)]
                 pub unsafe fn _export_create_cabi<T: Guest>(
                     arg0: *mut u8,
                     arg1: usize,
@@ -1341,6 +1394,9 @@ pub mod exports {
                 pub trait Guest {
                     /// loads just the XML like markdown
                     fn load() -> _rt::String;
+                    /// Register wasm functions to be bound to Rhai
+                    /// Returns a list of func names that are to be bound
+                    fn register() -> _rt::Vec<_rt::String>;
                     /// create a seed and lock it
                     fn create(username: _rt::String, password: _rt::String);
                     /// Unlock an existing encrypted seed
@@ -1365,6 +1421,12 @@ pub mod exports {
                         = "cabi_post_component:plugin/run#load"] unsafe extern "C" fn
                         _post_return_load(arg0 : * mut u8,) { $($path_to_types)*::
                         __post_return_load::<$ty > (arg0) } #[export_name =
+                        "component:plugin/run#register"] unsafe extern "C" fn
+                        export_register() -> * mut u8 { $($path_to_types)*::
+                        _export_register_cabi::<$ty > () } #[export_name =
+                        "cabi_post_component:plugin/run#register"] unsafe extern "C" fn
+                        _post_return_register(arg0 : * mut u8,) { $($path_to_types)*::
+                        __post_return_register::<$ty > (arg0) } #[export_name =
                         "component:plugin/run#create"] unsafe extern "C" fn
                         export_create(arg0 : * mut u8, arg1 : usize, arg2 : * mut u8,
                         arg3 : usize,) { $($path_to_types)*:: _export_create_cabi::<$ty >
@@ -1528,8 +1590,8 @@ pub(crate) use __export_plugin_world_impl as export;
 #[cfg(target_arch = "wasm32")]
 #[link_section = "component-type:wit-bindgen:0.35.0:component:plugin:plugin-world:encoded world"]
 #[doc(hidden)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 1665] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xfe\x0b\x01A\x02\x01\
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 1686] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\x93\x0c\x01A\x02\x01\
 A\x0d\x01B\x0e\x01r\x02\x04names\x05values\x04\0\x0cstring-event\x03\0\0\x01p}\x01\
 r\x02\x04names\x05value\x02\x04\0\x0bbytes-event\x03\0\x03\x01ps\x01r\x02\x04nam\
 es\x05value\x05\x04\0\x11string-list-event\x03\0\x06\x01q\x04\x04save\0\0\x04tex\
@@ -1556,18 +1618,18 @@ turn-values\x03\0\x08\x01q\x04\x0dinvalid-codec\x01s\0\x14wallet-uninitialized\0
 \x01\x0d\x01@\0\0}\x04\0\x0brandom-byte\x01\x0e\x01p}\x01j\x01\x0f\x01\x0b\x01@\x01\
 \x04args\x03\0\x10\x04\0\x06get-mk\x01\x11\x01@\x01\x04args\x05\0\x10\x04\0\x05p\
 rove\x01\x12\x01@\x01\x05order\x07\x01\0\x04\0\x05order\x01\x13\x01@\0\0s\x04\0\x09\
-get-scope\x01\x14\x03\0\x13host:component/host\x05\x07\x01B\x16\x02\x03\x02\x01\x02\
+get-scope\x01\x14\x03\0\x13host:component/host\x05\x07\x01B\x19\x02\x03\x02\x01\x02\
 \x04\0\x05event\x03\0\0\x02\x03\x02\x01\x03\x04\0\x08key-args\x03\0\x02\x01q\x04\
 \x0dinvalid-codec\x01s\0\x14wallet-uninitialized\0\0\x0emultikey-error\x01s\0\x0d\
 key-not-found\x01s\0\x04\0\x08mk-error\x03\0\x04\x01p}\x01r\x02\x02mk\x06\x04dat\
-a\x06\x04\0\x0aprove-args\x03\0\x07\x01@\0\0s\x04\0\x04load\x01\x09\x01@\x02\x08\
-usernames\x08passwords\x01\0\x04\0\x06create\x01\x0a\x01@\x03\x08usernames\x08pa\
-sswords\x0eencrypted-seeds\x01\0\x04\0\x06unlock\x01\x0b\x01j\x01\x06\x01\x05\x01\
-@\x01\x04args\x03\0\x0c\x04\0\x06get-mk\x01\x0d\x01@\x01\x04args\x08\0\x0c\x04\0\
-\x05prove\x01\x0e\x01@\0\0\x7f\x04\0\x08unlocked\x01\x0f\x04\0\x14component:plug\
-in/run\x05\x08\x04\0\x1dcomponent:plugin/plugin-world\x04\0\x0b\x12\x01\0\x0cplu\
-gin-world\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.\
-220.0\x10wit-bindgen-rust\x060.35.0";
+a\x06\x04\0\x0aprove-args\x03\0\x07\x01@\0\0s\x04\0\x04load\x01\x09\x01ps\x01@\0\
+\0\x0a\x04\0\x08register\x01\x0b\x01@\x02\x08usernames\x08passwords\x01\0\x04\0\x06\
+create\x01\x0c\x01@\x03\x08usernames\x08passwords\x0eencrypted-seeds\x01\0\x04\0\
+\x06unlock\x01\x0d\x01j\x01\x06\x01\x05\x01@\x01\x04args\x03\0\x0e\x04\0\x06get-\
+mk\x01\x0f\x01@\x01\x04args\x08\0\x0e\x04\0\x05prove\x01\x10\x01@\0\0\x7f\x04\0\x08\
+unlocked\x01\x11\x04\0\x14component:plugin/run\x05\x08\x04\0\x1dcomponent:plugin\
+/plugin-world\x04\0\x0b\x12\x01\0\x0cplugin-world\x03\0\0\0G\x09producers\x01\x0c\
+processed-by\x02\x0dwit-component\x070.220.0\x10wit-bindgen-rust\x060.35.0";
 #[inline(never)]
 #[doc(hidden)]
 pub fn __link_custom_section_describing_imports() {

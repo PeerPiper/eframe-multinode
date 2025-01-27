@@ -77,6 +77,11 @@ impl Guest for Component {
         .to_string()
     }
 
+    // register the unlocked function
+    fn register() -> Vec<String> {
+        vec!["unlocked".to_string()]
+    }
+
     /// Returns true if the wallet is unlocked (is some)
     fn unlocked() -> bool {
         let w = WALLET.lock().unwrap();
