@@ -90,7 +90,7 @@ impl Guest for Component {
         // No records (structs), enums (variants) as they are named,
         // and the host has no idea what your names are.
         // TODO: Grab names from the *.wasm wit to overcome this?
-        vec!["".to_string()]
+        vec![]
     }
 }
 
