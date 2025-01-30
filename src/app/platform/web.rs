@@ -5,6 +5,7 @@
 //! This module contains the web specific code for the platform.
 //! Instead of spinning up a native node, this code would connect to a remote node
 //! using peerpiper-browser.
+mod chat;
 pub mod piper;
 mod settings;
 mod storage;

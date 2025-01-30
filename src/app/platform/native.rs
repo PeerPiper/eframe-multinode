@@ -2,11 +2,13 @@
 //!
 //! For example, a native node will only be available here. Whereas the browser needs to connect
 //! to a remote node, which is handled in the `web` module.
+mod chat;
 mod cloudflare;
 mod error;
 mod settings;
 mod storage;
 
+use chat::ChatWidget;
 pub use error::Error;
 pub use peerpiper_native::NativeBlockstore as Blockstore;
 use peerpiper_native::NativeBlockstoreBuilder;
@@ -66,6 +68,9 @@ pub(crate) struct Platform {
     addr: Arc<Mutex<Option<Multiaddr>>>,
 
     pub rdx_runner: RdxRunner,
+
+    /// Chat Widget for the platform
+    chat_widget: ChatWidget,
 }
 
 impl Default for Platform {
@@ -207,6 +212,7 @@ impl Default for Platform {
             ctx,
             addr,
             rdx_runner,
+            chat_widget: Default::default(),
         }
     }
 }
@@ -269,5 +275,10 @@ impl Platform {
                 ctx.request_repaint();
             }
         }
+    }
+
+    pub(crate) fn chat(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
+        self.chat_widget.ui(ctx, ui);
+        ctx.request_repaint();
     }
 }

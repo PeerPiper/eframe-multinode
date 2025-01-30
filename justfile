@@ -1,5 +1,9 @@
 # justfile for just.systems recipes. 
 
+# use just.systems variable for the ollama version
+# https://github.com/ollama/ollama/releases 
+ollama_version := "v0.5.7"
+
 version := `cat Cargo.toml | grep version | head -n 1 | cut -d '"' -f 2`
 
 # 1. Create a new tag to trigger a release.
@@ -51,3 +55,35 @@ check32:
 
 force: build-wits
   cargo run --bin force-build-wasm-bins
+
+# This is called from github/workflows, if you change this name, change that file too
+install_ollama_linux:
+  echo "Installing ollama on Linux"
+  # wget https://github.com/jmorganca/ollama/releases/download/v0.1.20/ollama-darwin 
+  wget https://github.com/ollama/ollama/releases/download/{{ollama_version}}/ollama-linux-amd64.tgz
+  # Now that we've downloaded the tarball, we need to extract it 
+  mkdir -p ollama_files
+  tar -xvzf ollama-linux-amd64.tgz --directory ollama_files
+  # Make the binary executable 
+  chmod +x ollama_files/bin/ollama
+  # remove the tar 
+  rm ollama-linux-amd64.tgz
+
+install_ollama_macos:
+  echo "Installing ollama on Mac"
+  wget https://github.com/jmorganca/ollama/releases/download/{{ollama_version}}/ollama-darwin
+  chmod +x ollama-darwin
+
+  # needs this specific name?
+  mv ollama-darwin src/ollama/ollama-aarch64-apple-darwin
+
+install_ollama_windows:
+  echo "Installing ollama on Windows"
+  curl -L -O -o . "https://github.com/ollama/ollama/releases/download/{{ollama_version}}/ollama-windows-amd64.zip"
+  unzip ollama-windows-amd64.zip
+
+  # needs this specific name?
+  mv ollama.exe src/ollama/ollama-x86_64-pc-windows-msvc.exe
+  # mv all the *.dll files too, they can keep the same name
+  mv *.dll src/ollama/
+

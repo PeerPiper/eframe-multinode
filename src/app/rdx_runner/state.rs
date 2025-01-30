@@ -116,11 +116,11 @@ impl State {
         // get a clone of the scope
         let scope = self.scope.lock().unwrap().clone();
 
-        tracing::info!("Saving state: {:?}", scope);
+        tracing::trace!("Saving scope: {:?}", scope);
 
         let str = serde_json::to_string(&scope)?;
 
-        tracing::info!("State serialized: {:?}", str);
+        tracing::trace!("State serialized: {:?}", str);
 
         let bytes = str.as_bytes().to_vec();
 

@@ -72,6 +72,8 @@ tokio = { version = "1", features = [
 ] }
 peerpiper-plugins = { git = "https://github.com/PeerPiper/peerpiper.git" }
 peerpiper-native = { git = "https://github.com/PeerPiper/peerpiper.git" }
+ollama-rs = { version = "0.2.4", features = ["stream"] }
+ollama-launcher = { git = "https://github.com/DougAnderson444/eframe_ollama.git" }
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]

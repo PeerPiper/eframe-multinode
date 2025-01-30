@@ -172,6 +172,24 @@ impl eframe::App for MultinodeApp {
                 });
             });
 
+        // Right panel is for AI LLM chat box
+        #[cfg(not(target_arch = "wasm32"))]
+        egui::SidePanel::right("chat_panel")
+            .resizable(true)
+            .default_width(160.0)
+            .min_width(160.0)
+            .show(ctx, |ui| {
+                ui.add_space(4.0);
+                ui.vertical_centered(|ui| {
+                    ui.heading("💬 AI Chat");
+                });
+
+                ui.separator();
+
+                // chat box here for ollama chat
+                self.platform.chat(ctx, ui);
+            });
+
         egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 powered_by_egui_and_eframe(ui);

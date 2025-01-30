@@ -25,11 +25,21 @@ async fn main() -> eframe::Result {
             ),
         ..Default::default()
     };
-    eframe::run_native(
+
+    let shutdown_tx = ollama_launcher::launch_ollama();
+
+    let _ = eframe::run_native(
         "PeerPiper-Multinode",
         native_options,
         Box::new(|cc| Ok(Box::new(eframe_multinode::MultinodeApp::new(cc)))),
-    )
+    );
+
+    // Shutdown the ollama server
+    shutdown_tx
+        .send(())
+        .expect("Failed to send shutdown signal");
+
+    Ok(())
 }
 
 // When compiling to web using trunk:

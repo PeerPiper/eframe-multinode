@@ -14,3 +14,5 @@ target_wasm
 local_keypair
 
 *.env
+ollama_files
+ollama-linux-amd64.tgz
