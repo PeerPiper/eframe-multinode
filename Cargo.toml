@@ -117,10 +117,10 @@ opt-level = 2
 # peerpiper-native = { path = "../peerpiper/crates/peerpiper-native" }
 # peerpiper-browser = { path = "../peerpiper/crates/peerpiper-browser" }
 
-[patch.'https://github.com/DougAnderson444/rdx.git']
-rdx = { path = "../rdx" }
-html-to-egui = { path = "../rdx/crates/html-to-egui" }
-html-egui-bindgen = { path = "../rdx/crates/html-egui-bindgen" }
+# [patch.'https://github.com/DougAnderson444/rdx.git']
+# rdx = { path = "../rdx" }
+# html-to-egui = { path = "../rdx/crates/html-to-egui" }
+# html-egui-bindgen = { path = "../rdx/crates/html-egui-bindgen" }
 
 # If you want to use the bleeding edge version of egui and eframe:
 # egui = { git = "https://github.com/emilk/egui", branch = "master" }
