@@ -279,6 +279,5 @@ impl Platform {
 
     pub(crate) fn chat(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
         self.chat_widget.ui(ctx, ui);
-        ctx.request_repaint();
     }
 }
