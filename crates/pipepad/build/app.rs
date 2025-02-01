@@ -11,7 +11,10 @@ pub(crate) fn gen_script() -> String {
 
     // {{this}} will create a Rhai Scope variable of the same name for us
     // to save the value of the text into
-    let textarea = TextArea::builder().placeholder("{{pipepad}}").build();
+    let textarea = TextArea::builder()
+        .placeholder("{{pipepad}}")
+        .class("monospace")
+        .build();
 
     let pipepad = Division::builder()
         .push(title)
